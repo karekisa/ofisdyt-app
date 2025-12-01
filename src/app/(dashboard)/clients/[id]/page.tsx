@@ -9,6 +9,26 @@ import ClientTabs from './ClientTabs'
 import EditClientDialog from './EditClientDialog'
 import { formatPhoneForWhatsapp } from '@/lib/utils'
 
+// BMI calculation utility
+const calculateBMI = (weight: number | null, height: number | null): number | null => {
+  if (!weight || !height || height === 0) return null
+  // Height is in cm, convert to meters
+  const heightInMeters = height / 100
+  return weight / (heightInMeters * heightInMeters)
+}
+
+const getBMICategory = (bmi: number): { label: string; color: string } => {
+  if (bmi < 18.5) {
+    return { label: 'Zayıf', color: 'bg-blue-100 text-blue-800 border-blue-200' }
+  } else if (bmi < 25) {
+    return { label: 'Normal', color: 'bg-green-100 text-green-800 border-green-200' }
+  } else if (bmi < 30) {
+    return { label: 'Fazla Kilolu', color: 'bg-yellow-100 text-yellow-800 border-yellow-200' }
+  } else {
+    return { label: 'Obez', color: 'bg-red-100 text-red-800 border-red-200' }
+  }
+}
+
 type Client = {
   id: string
   name: string
@@ -26,9 +46,11 @@ export default function ClientDetailPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'info' | 'measurements' | 'progress' | 'dietlists'>('info')
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [latestWeight, setLatestWeight] = useState<number | null>(null)
 
   useEffect(() => {
     loadClient()
+    loadLatestWeight()
   }, [params.id])
 
   const loadClient = async () => {
@@ -55,6 +77,23 @@ export default function ClientDetailPage() {
 
     setClient(data)
     setLoading(false)
+  }
+
+  const loadLatestWeight = async () => {
+    const { data, error } = await supabase
+      .from('measurements')
+      .select('weight')
+      .eq('client_id', params.id)
+      .not('weight', 'is', null)
+      .order('date', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (!error && data?.weight) {
+      setLatestWeight(data.weight)
+    } else {
+      setLatestWeight(null)
+    }
   }
 
   if (loading) {
@@ -165,6 +204,21 @@ export default function ClientDetailPage() {
               {client.age && <span>Yaş: {client.age}</span>}
               {client.height && <span>Boy: {client.height} cm</span>}
               {client.gender && <span>Cinsiyet: {client.gender === 'male' ? 'Erkek' : client.gender === 'female' ? 'Kadın' : 'Diğer'}</span>}
+              {latestWeight && (
+                <span>Kilo: {latestWeight.toFixed(1)} kg</span>
+              )}
+              {(() => {
+                const bmi = calculateBMI(latestWeight, client.height)
+                if (bmi !== null) {
+                  const category = getBMICategory(bmi)
+                  return (
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${category.color}`}>
+                      VKİ: {bmi.toFixed(1)} ({category.label})
+                    </span>
+                  )
+                }
+                return null
+              })()}
             </div>
           </div>
           <div className="flex space-x-3">
@@ -195,7 +249,13 @@ export default function ClientDetailPage() {
       </div>
 
       {/* Tabs */}
-      <ClientTabs clientId={client.id} activeTab={activeTab} setActiveTab={setActiveTab} client={client} />
+      <ClientTabs 
+        clientId={client.id} 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        client={client}
+        onMeasurementAdded={loadLatestWeight}
+      />
 
       {/* Edit Client Dialog */}
       {client && (

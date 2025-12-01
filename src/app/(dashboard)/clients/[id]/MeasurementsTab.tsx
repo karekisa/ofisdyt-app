@@ -13,7 +13,21 @@ type Measurement = {
   body_fat_ratio: number | null
 }
 
-export default function MeasurementsTab({ clientId }: { clientId: string }) {
+// BMI calculation utility
+const calculateBMI = (weight: number | null, height: number | null): number | null => {
+  if (!weight || !height || height === 0) return null
+  // Height is in cm, convert to meters
+  const heightInMeters = height / 100
+  return weight / (heightInMeters * heightInMeters)
+}
+
+type MeasurementsTabProps = {
+  clientId: string
+  clientHeight?: number | null
+  onMeasurementAdded?: () => void
+}
+
+export default function MeasurementsTab({ clientId, clientHeight, onMeasurementAdded }: MeasurementsTabProps) {
   const [measurements, setMeasurements] = useState<Measurement[]>([])
   const [showForm, setShowForm] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -63,6 +77,9 @@ export default function MeasurementsTab({ clientId }: { clientId: string }) {
         body_fat_ratio: '',
       })
       loadMeasurements()
+      if (onMeasurementAdded) {
+        onMeasurementAdded()
+      }
     }
     setLoading(false)
   }
@@ -172,22 +189,35 @@ export default function MeasurementsTab({ clientId }: { clientId: string }) {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                   Yağ Oranı (%)
                 </th>
+                {clientHeight && (
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                    VKİ
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {measurements.map((measurement) => (
-                <tr key={measurement.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {format(new Date(measurement.date), 'PP', { locale: tr })}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {measurement.weight?.toFixed(1) || '-'}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-900">
-                    {measurement.body_fat_ratio?.toFixed(1) || '-'}
-                  </td>
-                </tr>
-              ))}
+              {measurements.map((measurement) => {
+                const bmi = calculateBMI(measurement.weight, clientHeight || null)
+                return (
+                  <tr key={measurement.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {format(new Date(measurement.date), 'PP', { locale: tr })}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {measurement.weight?.toFixed(1) || '-'}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {measurement.body_fat_ratio?.toFixed(1) || '-'}
+                    </td>
+                    {clientHeight && (
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {bmi !== null ? bmi.toFixed(1) : '-'}
+                      </td>
+                    )}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

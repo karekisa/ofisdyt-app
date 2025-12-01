@@ -10,3 +10,4 @@ export type Appointment = {
   clients?: { name: string; phone: string | null } | null
 }
 
+

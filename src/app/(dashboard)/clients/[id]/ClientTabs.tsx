@@ -22,6 +22,7 @@ type ClientTabsProps = {
   activeTab: 'info' | 'measurements' | 'progress' | 'dietlists'
   setActiveTab: (tab: 'info' | 'measurements' | 'progress' | 'dietlists') => void
   client: Client
+  onMeasurementAdded?: () => void
 }
 
 export default function ClientTabs({
@@ -29,6 +30,7 @@ export default function ClientTabs({
   activeTab,
   setActiveTab,
   client,
+  onMeasurementAdded,
 }: ClientTabsProps) {
   const tabs = [
     { id: 'info' as const, label: 'Bilgiler', icon: User },
@@ -116,7 +118,11 @@ export default function ClientTabs({
           )}
 
           {activeTab === 'measurements' && (
-            <MeasurementsTab clientId={clientId} />
+            <MeasurementsTab 
+              clientId={clientId} 
+              clientHeight={client.height}
+              onMeasurementAdded={onMeasurementAdded}
+            />
           )}
 
           {activeTab === 'progress' && <ProgressTab clientId={clientId} />}
