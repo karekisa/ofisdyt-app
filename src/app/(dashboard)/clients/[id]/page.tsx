@@ -223,12 +223,6 @@ export default function ClientDetailPage() {
   }
 
   const handleDownloadCard = async () => {
-    const progressData = getProgressData()
-    if (!progressData) {
-      setToast({ message: 'En az 2 ölçüm kaydı gerekli', type: 'error' })
-      return
-    }
-
     setToast({ message: 'Görsel hazırlanıyor...', type: 'loading' })
 
     try {
@@ -388,27 +382,6 @@ export default function ClientDetailPage() {
               })()}
             </div>
             
-            {/* Success Card Generator Button */}
-            {(() => {
-              const progressData = getProgressData()
-              return (
-                <div className="mt-4">
-                  <button
-                    onClick={handleDownloadCard}
-                    disabled={!progressData}
-                    className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                      progressData
-                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl active:scale-95'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }`}
-                    title={!progressData ? 'En az 2 ölçüm kaydı gerekli' : 'Başarı kartını indir'}
-                  >
-                    <Share2 className="w-5 h-5" />
-                    <span>Başarı Kartı Oluştur</span>
-                  </button>
-                </div>
-              )
-            })()}
 
             {/* Smart Calculators: BMR & Ideal Weight */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
@@ -477,7 +450,28 @@ export default function ClientDetailPage() {
               })()}
             </div>
           </div>
-          <div className="flex space-x-3">
+          <div className="flex flex-wrap gap-2">
+            {/* Success Card Generator Button */}
+            <button
+              onClick={() => {
+                const progressData = getProgressData()
+                if (!progressData) {
+                  setToast({ message: 'Başarı kartı için en az 2 ölçüm (Öncesi/Sonrası) gereklidir.', type: 'error' })
+                  return
+                }
+                handleDownloadCard()
+              }}
+              className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                allMeasurements.length >= 2
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl active:scale-95'
+                  : 'bg-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
+              }`}
+              title={allMeasurements.length < 2 ? 'En az 2 ölçüm kaydı gerekli' : 'Başarı kartını indir'}
+            >
+              <Share2 className="w-5 h-5" />
+              <span>Başarı Kartı Oluştur</span>
+            </button>
+
             {client.phone && (
               <>
                 <a
@@ -522,11 +516,9 @@ export default function ClientDetailPage() {
         </div>
       )}
 
-      {/* Hidden Success Card Template (for image capture) */}
-      {(() => {
+      {/* Hidden Success Card Template (for image capture) - Always in DOM */}
+      {client && (() => {
         const progressData = getProgressData()
-        if (!progressData || !client) return null
-
         const maskedName = maskClientName(client.name)
 
         return (
@@ -548,25 +540,34 @@ export default function ClientDetailPage() {
             </div>
 
             {/* Hero Stat */}
-            <div className="text-center mb-12">
-              <div className="text-9xl font-black mb-4">
-                {progressData.totalLost > 0 ? '-' : '+'}
-                {Math.abs(progressData.totalLost).toFixed(1)} KG
-              </div>
-            </div>
+            {progressData ? (
+              <>
+                <div className="text-center mb-12">
+                  <div className="text-9xl font-black mb-4">
+                    {progressData.totalLost > 0 ? '-' : '+'}
+                    {Math.abs(progressData.totalLost).toFixed(1)} KG
+                  </div>
+                </div>
 
-            {/* Sub-stats */}
-            <div className="flex items-center space-x-8 text-2xl font-medium mb-16">
-              <div className="text-center">
-                <p className="text-white/80 text-lg mb-1">Başlangıç</p>
-                <p className="font-bold">{progressData.startWeight.toFixed(1)} kg</p>
+                {/* Sub-stats */}
+                <div className="flex items-center space-x-8 text-2xl font-medium mb-16">
+                  <div className="text-center">
+                    <p className="text-white/80 text-lg mb-1">Başlangıç</p>
+                    <p className="font-bold">{progressData.startWeight.toFixed(1)} kg</p>
+                  </div>
+                  <div className="w-px h-12 bg-white/30"></div>
+                  <div className="text-center">
+                    <p className="text-white/80 text-lg mb-1">Güncel</p>
+                    <p className="font-bold">{progressData.currentWeight.toFixed(1)} kg</p>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center mb-12">
+                <div className="text-6xl font-black mb-4">-</div>
+                <p className="text-2xl">Yeterli veri yok</p>
               </div>
-              <div className="w-px h-12 bg-white/30"></div>
-              <div className="text-center">
-                <p className="text-white/80 text-lg mb-1">Güncel</p>
-                <p className="font-bold">{progressData.currentWeight.toFixed(1)} kg</p>
-              </div>
-            </div>
+            )}
 
             {/* Footer/Branding */}
             <div className="mt-auto text-center">
