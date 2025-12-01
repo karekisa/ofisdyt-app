@@ -128,19 +128,19 @@ export default function ClientsPage() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Ad
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Telefon
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Yaş
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Cinsiyet
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 md:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İşlemler
                   </th>
                 </tr>
@@ -151,34 +151,34 @@ export default function ClientsPage() {
                     key={client.id}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                       <Link
                         href={`/clients/${client.id}`}
-                        className="text-sm font-medium text-gray-900 hover:text-green-600"
+                        className="text-xs md:text-sm font-medium text-gray-900 hover:text-green-600"
                       >
                         {client.name}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                       {client.phone ? (
                         <a
                           href={`tel:${client.phone}`}
-                          className="text-sm text-gray-600 hover:text-green-600 flex items-center space-x-1"
+                          className="text-xs md:text-sm text-gray-600 hover:text-green-600 flex items-center space-x-1"
                         >
-                          <Phone className="w-4 h-4" />
+                          <Phone className="w-3 h-3 md:w-4 md:h-4" />
                           <span>{client.phone}</span>
                         </a>
                       ) : (
-                        <span className="text-sm text-gray-400">-</span>
+                        <span className="text-xs md:text-sm text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-600">
                       {client.age || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-600">
                       {client.gender || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-right text-xs md:text-sm font-medium">
                       <Link
                         href={`/clients/${client.id}`}
                         className="text-green-600 hover:text-green-700"

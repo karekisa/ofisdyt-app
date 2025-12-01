@@ -123,8 +123,8 @@ export default function WeekView({
   const totalHeight = timeSlots.length * SLOT_HEIGHT
 
   return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[800px]">
+    <div className="overflow-x-auto -mx-4 md:mx-0">
+      <div className="min-w-[800px] px-4 md:px-0">
         {/* Header: Day Names */}
         <div className="grid grid-cols-8 border-b-2 border-gray-300">
           <div className="p-3 border-r-2 border-gray-300"></div>
@@ -133,7 +133,7 @@ export default function WeekView({
             return (
               <div
                 key={idx}
-                className={`p-3 text-center border-r-2 border-gray-300 last:border-r-0 ${
+                className={`p-3 text-center border-r-2 border-gray-300 last:border-r-0 min-w-[100px] ${
                   isToday ? 'bg-green-50' : ''
                 }`}
               >
@@ -179,7 +179,7 @@ export default function WeekView({
             return (
               <div
                 key={dayIdx}
-                className={`relative border-r-2 border-gray-300 last:border-r-0 ${
+                className={`relative border-r-2 border-gray-300 last:border-r-0 min-w-[100px] ${
                   isToday ? 'bg-green-50/30' : ''
                 }`}
               >

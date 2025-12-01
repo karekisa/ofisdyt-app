@@ -280,9 +280,9 @@ export default function PublicBookingPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="flex flex-col lg:grid lg:grid-cols-3 gap-6">
             {/* Left Column: Profile Card (30% on desktop) */}
-            <div className="lg:sticky lg:top-8 lg:self-start">
+            <div className="lg:sticky lg:top-8 lg:self-start order-2 lg:order-1">
               <div className="bg-white rounded-xl shadow-lg p-6">
                 {/* Share Button */}
                 <div className="flex justify-end mb-4">
@@ -363,7 +363,7 @@ export default function PublicBookingPage() {
             </div>
 
             {/* Right Column: Calendar & Booking Form (70% on desktop) */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 order-1 lg:order-2">
               <form
                 onSubmit={handleSubmit}
                 className="bg-white rounded-xl shadow-lg p-6 md:p-8 space-y-8"

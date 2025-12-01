@@ -322,25 +322,25 @@ export default function FinancePage() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tarih
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Kategori
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Açıklama
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tür
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Tutar
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ödeme Yöntemi
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 md:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   İşlemler
                 </th>
               </tr>
@@ -348,22 +348,22 @@ export default function FinancePage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={7} className="px-3 md:px-6 py-8 text-center text-xs md:text-sm text-gray-500">
                     Bu ay için işlem bulunmuyor
                   </td>
                 </tr>
               ) : (
                 transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
                       {format(parseISO(transaction.transaction_date), 'd MMMM yyyy', {
                         locale: tr,
                       })}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
                       {transaction.category}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-3 md:px-6 py-4 text-xs md:text-sm text-gray-900">
                       {transaction.description || '-'}
                       {transaction.clients && (
                         <span className="text-xs text-gray-500 ml-2">
@@ -371,7 +371,7 @@ export default function FinancePage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap">
                       <span
                         className={`px-2 py-1 text-xs font-medium rounded-full ${
                           transaction.type === 'income'
@@ -383,7 +383,7 @@ export default function FinancePage() {
                       </span>
                     </td>
                     <td
-                      className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                      className={`px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm font-semibold ${
                         transaction.type === 'income'
                           ? 'text-green-600'
                           : 'text-red-600'
@@ -392,14 +392,14 @@ export default function FinancePage() {
                       {transaction.type === 'income' ? '+' : '-'}
                       {formatCurrency(Number(transaction.amount))}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm text-gray-900">
                       {
                         PAYMENT_METHODS.find(
                           (m) => m.value === transaction.payment_method
                         )?.label
                       }
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-3 md:px-6 py-4 whitespace-nowrap text-xs md:text-sm">
                       <button
                         onClick={() => handleDelete(transaction.id)}
                         className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded transition-colors"
