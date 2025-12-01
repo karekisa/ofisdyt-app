@@ -5,16 +5,7 @@ import { X, Edit } from 'lucide-react'
 import { format, parseISO, startOfDay } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { supabase } from '@/lib/supabase'
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-  guest_name: string | null
-  guest_phone: string | null
-  client_id: string | null
-  clients?: { name: string } | null
-}
+import { Appointment } from './types'
 
 type AppointmentsListDialogProps = {
   isOpen: boolean
@@ -55,7 +46,8 @@ export default function AppointmentsListDialog({
         `
         *,
         clients:client_id (
-          name
+          name,
+          phone
         )
       `
       )

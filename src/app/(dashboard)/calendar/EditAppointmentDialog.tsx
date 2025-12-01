@@ -5,16 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { X, Trash2 } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-  guest_name: string | null
-  guest_phone: string | null
-  client_id: string | null
-  clients?: { name: string } | null
-}
+import { Appointment } from './types'
 
 type EditAppointmentDialogProps = {
   isOpen: boolean

@@ -12,15 +12,7 @@ import {
   getDay,
 } from 'date-fns'
 import { tr } from 'date-fns/locale'
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-  guest_name: string | null
-  client_id: string | null
-  clients?: { name: string } | null
-}
+import { Appointment } from './types'
 
 type MonthViewProps = {
   currentDate: Date

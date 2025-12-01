@@ -32,16 +32,7 @@ import DayView from './DayView'
 import AppointmentDialog from './AppointmentDialog'
 import EditAppointmentDialog from './EditAppointmentDialog'
 import AppointmentsListDialog from './AppointmentsListDialog'
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-  guest_name: string | null
-  guest_phone: string | null
-  client_id: string | null
-  clients?: { name: string; phone: string | null } | null
-}
+import { Appointment } from './types'
 
 type ViewType = 'month' | 'week' | 'day'
 

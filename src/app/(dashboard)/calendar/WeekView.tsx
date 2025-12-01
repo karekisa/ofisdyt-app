@@ -5,16 +5,7 @@ import { tr } from 'date-fns/locale'
 import { Bell } from 'lucide-react'
 import { generateTimeSlots, findClosestSlotIndex } from './utils'
 import { formatPhoneForWhatsapp } from '@/lib/utils'
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-  guest_name: string | null
-  guest_phone: string | null
-  client_id: string | null
-  clients?: { name: string; phone: string | null } | null
-}
+import { Appointment } from './types'
 
 type WeekViewProps = {
   currentDate: Date
