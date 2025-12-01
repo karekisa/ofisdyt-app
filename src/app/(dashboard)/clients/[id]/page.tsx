@@ -3,11 +3,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
-import { ArrowLeft, Phone, MessageCircle, Pencil, Target, Flame } from 'lucide-react'
+import { ArrowLeft, Phone, MessageCircle, Pencil, Target, Flame, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import ClientTabs from './ClientTabs'
 import EditClientDialog from './EditClientDialog'
 import { formatPhoneForWhatsapp } from '@/lib/utils'
+import html2canvas from 'html2canvas'
 
 // BMI calculation utility
 const calculateBMI = (weight: number | null, height: number | null): number | null => {
@@ -104,11 +105,22 @@ export default function ClientDetailPage() {
   const [activeTab, setActiveTab] = useState<'info' | 'measurements' | 'progress' | 'dietlists'>('info')
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [latestWeight, setLatestWeight] = useState<number | null>(null)
+  const [allMeasurements, setAllMeasurements] = useState<Array<{ date: string; weight: number }>>([])
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'loading' } | null>(null)
 
   useEffect(() => {
     loadClient()
     loadLatestWeight()
+    loadAllMeasurements()
+    loadClinicName()
   }, [params.id])
+
+  useEffect(() => {
+    if (toast) {
+      const timer = setTimeout(() => setToast(null), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast])
 
   const loadClient = async () => {
     const {
@@ -150,6 +162,104 @@ export default function ClientDetailPage() {
       setLatestWeight(data.weight)
     } else {
       setLatestWeight(null)
+    }
+  }
+
+  const loadAllMeasurements = async () => {
+    const { data, error } = await supabase
+      .from('measurements')
+      .select('date, weight')
+      .eq('client_id', params.id)
+      .not('weight', 'is', null)
+      .order('date', { ascending: true })
+
+    if (!error && data) {
+      setAllMeasurements(data.map(m => ({ date: m.date, weight: m.weight })))
+    }
+  }
+
+  const loadClinicName = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('clinic_name')
+      .eq('id', user.id)
+      .single()
+
+    if (data?.clinic_name) {
+      setClinicName(data.clinic_name)
+    }
+  }
+
+  // Calculate progress data
+  const getProgressData = () => {
+    if (allMeasurements.length < 2) return null
+
+    const startWeight = allMeasurements[0].weight
+    const currentWeight = allMeasurements[allMeasurements.length - 1].weight
+    const totalLost = startWeight - currentWeight
+
+    return {
+      startWeight,
+      currentWeight,
+      totalLost,
+    }
+  }
+
+  // Mask client name for privacy (e.g., "Ayşe Yılmaz" -> "Ayşe Y.")
+  const maskClientName = (name: string): string => {
+    const parts = name.trim().split(' ')
+    if (parts.length === 1) {
+      return parts[0]
+    }
+    const firstName = parts[0]
+    const lastNameInitial = parts[parts.length - 1][0]?.toUpperCase() || ''
+    return `${firstName} ${lastNameInitial}.`
+  }
+
+  const handleDownloadCard = async () => {
+    const progressData = getProgressData()
+    if (!progressData) {
+      setToast({ message: 'En az 2 ölçüm kaydı gerekli', type: 'error' })
+      return
+    }
+
+    setToast({ message: 'Görsel hazırlanıyor...', type: 'loading' })
+
+    try {
+      const element = document.getElementById('success-card-capture')
+      if (!element) {
+        setToast({ message: 'Kart bulunamadı', type: 'error' })
+        return
+      }
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        backgroundColor: null,
+        useCORS: true,
+        logging: false,
+      })
+
+      const dataUrl = canvas.toDataURL('image/png')
+      
+      // Create download link
+      const link = document.createElement('a')
+      const clientNameSlug = client?.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'client'
+      link.download = `basari-hikayesi-${clientNameSlug}.png`
+      link.href = dataUrl
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      setToast({ message: 'Başarı kartı indirildi! 🎉', type: 'success' })
+    } catch (error) {
+      console.error('Error generating card:', error)
+      setToast({ message: 'Görsel oluşturulurken hata oluştu', type: 'error' })
     }
   }
 
@@ -278,6 +388,28 @@ export default function ClientDetailPage() {
               })()}
             </div>
             
+            {/* Success Card Generator Button */}
+            {(() => {
+              const progressData = getProgressData()
+              return (
+                <div className="mt-4">
+                  <button
+                    onClick={handleDownloadCard}
+                    disabled={!progressData}
+                    className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      progressData
+                        ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg hover:shadow-xl active:scale-95'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+                    title={!progressData ? 'En az 2 ölçüm kaydı gerekli' : 'Başarı kartını indir'}
+                  >
+                    <Share2 className="w-5 h-5" />
+                    <span>Başarı Kartı Oluştur</span>
+                  </button>
+                </div>
+              )
+            })()}
+
             {/* Smart Calculators: BMR & Ideal Weight */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
               {/* Ideal Weight Range Card */}
@@ -372,13 +504,88 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
+      {/* Toast Notification */}
+      {toast && (
+        <div
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2 transition-all ${
+            toast.type === 'success'
+              ? 'bg-green-500 text-white'
+              : toast.type === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-blue-500 text-white'
+          }`}
+        >
+          {toast.type === 'loading' && (
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+          )}
+          <span>{toast.message}</span>
+        </div>
+      )}
+
+      {/* Hidden Success Card Template (for image capture) */}
+      {(() => {
+        const progressData = getProgressData()
+        if (!progressData || !client) return null
+
+        const maskedName = maskClientName(client.name)
+
+        return (
+          <div
+            id="success-card-capture"
+            style={{
+              position: 'fixed',
+              top: '-9999px',
+              left: '-9999px',
+              width: '1080px',
+              height: '1080px',
+            }}
+            className="bg-gradient-to-br from-teal-500 to-green-600 flex flex-col items-center justify-center text-white p-16"
+          >
+            {/* Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-5xl font-bold mb-4">BAŞARI HİKAYESİ 🌟</h2>
+              <p className="text-3xl font-semibold">{maskedName}</p>
+            </div>
+
+            {/* Hero Stat */}
+            <div className="text-center mb-12">
+              <div className="text-9xl font-black mb-4">
+                {progressData.totalLost > 0 ? '-' : '+'}
+                {Math.abs(progressData.totalLost).toFixed(1)} KG
+              </div>
+            </div>
+
+            {/* Sub-stats */}
+            <div className="flex items-center space-x-8 text-2xl font-medium mb-16">
+              <div className="text-center">
+                <p className="text-white/80 text-lg mb-1">Başlangıç</p>
+                <p className="font-bold">{progressData.startWeight.toFixed(1)} kg</p>
+              </div>
+              <div className="w-px h-12 bg-white/30"></div>
+              <div className="text-center">
+                <p className="text-white/80 text-lg mb-1">Güncel</p>
+                <p className="font-bold">{progressData.currentWeight.toFixed(1)} kg</p>
+              </div>
+            </div>
+
+            {/* Footer/Branding */}
+            <div className="mt-auto text-center">
+              <p className="text-2xl font-semibold">{clinicName}</p>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       <ClientTabs 
         clientId={client.id} 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         client={client}
-        onMeasurementAdded={loadLatestWeight}
+        onMeasurementAdded={() => {
+          loadLatestWeight()
+          loadAllMeasurements()
+        }}
       />
 
       {/* Edit Client Dialog */}
