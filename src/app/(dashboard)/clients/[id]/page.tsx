@@ -107,6 +107,7 @@ export default function ClientDetailPage() {
   const [latestWeight, setLatestWeight] = useState<number | null>(null)
   const [allMeasurements, setAllMeasurements] = useState<Array<{ date: string; weight: number }>>([])
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'loading' } | null>(null)
+  const [clinicName, setClinicName] = useState<string>('OfisDyt')
 
   useEffect(() => {
     loadClient()
