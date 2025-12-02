@@ -177,7 +177,7 @@ export default function FinancePage() {
         </div>
         <button
           onClick={() => setIsDialogOpen(true)}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium active:scale-95"
+          className="hidden md:inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium active:scale-95"
         >
           <Plus className="w-5 h-5" />
           <span>İşlem Ekle</span>
@@ -405,6 +405,15 @@ export default function FinancePage() {
       </div>
 
       {/* Add Transaction Dialog */}
+      {/* Mobile FAB */}
+      <button
+        onClick={() => setIsDialogOpen(true)}
+        className="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-green-600 text-white rounded-full shadow-lg hover:bg-green-700 transition-colors flex items-center justify-center z-40 active:scale-95"
+        aria-label="İşlem Ekle"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
+
       {isDialogOpen && (
         <AddTransactionDialog
           isOpen={isDialogOpen}

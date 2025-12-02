@@ -1,6 +1,6 @@
-# Dietitian Pro - Mobile-First Management SaaS
+# OfisDyt - Diyetisyenler İçin Dijital Asistan
 
-A professional dietitian management platform built with Next.js 14, Tailwind CSS, and Supabase.
+Diyetisyenler için profesyonel danışan yönetimi, randevu takibi ve dijital asistan platformu. Next.js 14, Tailwind CSS ve Supabase ile geliştirilmiştir.
 
 ## Features
 

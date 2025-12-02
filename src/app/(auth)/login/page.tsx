@@ -104,7 +104,7 @@ export default function LoginPage() {
     if (error) {
       alert('Giriş hatası: ' + error.message)
     } else {
-      router.push('/')
+      router.push('/dashboard')
       router.refresh()
     }
 
@@ -114,11 +114,17 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            {isSignUp ? 'Hesap Oluştur' : 'Giriş Yap'}
+        <div className="text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-xl">O</span>
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">OfisDyt</h1>
+          </div>
+          <h2 className="text-3xl font-extrabold text-gray-900">
+            {isSignUp ? 'Hesap Oluştur' : "OfisDyt'e Hoşgeldiniz"}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             {isSignUp
               ? 'Yeni hesap oluşturmak için bilgilerinizi girin'
               : 'Hesabınıza giriş yapın'}

@@ -52,7 +52,7 @@ export default function SubscriptionStatusWidget({
         button: {
           text: 'Paket Seç',
           href: '/subscription',
-          className: 'w-full bg-teal-600 text-white text-xs py-2 rounded mt-2 hover:bg-teal-700 transition-colors',
+          className: 'w-full bg-green-600 text-white text-xs py-2 rounded mt-2 hover:bg-green-700 transition-colors',
         },
       }
     }

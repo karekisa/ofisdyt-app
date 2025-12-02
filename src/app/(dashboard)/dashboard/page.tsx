@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Users, Calendar, DollarSign, Clock } from 'lucide-react'
 import Link from 'next/link'
-import { format } from 'date-fns'
+import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
 
@@ -19,6 +19,7 @@ export default function DashboardPage() {
   )
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  const [userName, setUserName] = useState<string>('')
 
   useEffect(() => {
     loadData()
@@ -31,6 +32,17 @@ export default function DashboardPage() {
     if (!user) return
 
     setUser(user)
+
+    // Get user profile for name
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.full_name) {
+      setUserName(profile.full_name)
+    }
 
     // Get total clients
     const { count: clientsCount } = await supabase
@@ -68,30 +80,29 @@ export default function DashboardPage() {
       .order('start_time', { ascending: true })
 
     // Get monthly revenue from transactions
-    const currentMonthStart = new Date()
-    currentMonthStart.setDate(1)
-    currentMonthStart.setHours(0, 0, 0, 0)
-    const currentMonthEnd = new Date()
-    currentMonthEnd.setMonth(currentMonthEnd.getMonth() + 1)
-    currentMonthEnd.setDate(0)
-    currentMonthEnd.setHours(23, 59, 59, 999)
+    const currentMonthStart = startOfMonth(new Date())
+    const currentMonthEnd = endOfMonth(new Date())
 
     const { data: transactions } = await supabase
       .from('transactions')
       .select('amount, type')
       .eq('dietitian_id', user.id)
-      .eq('type', 'income')
-      .gte('transaction_date', currentMonthStart.toISOString().split('T')[0])
-      .lte('transaction_date', currentMonthEnd.toISOString().split('T')[0])
+      .gte('transaction_date', format(currentMonthStart, 'yyyy-MM-dd'))
+      .lte('transaction_date', format(currentMonthEnd, 'yyyy-MM-dd'))
 
-    const monthlyRevenue =
-      transactions?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+    const revenue =
+      transactions?.reduce((sum, t) => {
+        return (
+          sum + ((t.type as string) === 'income' ? Number(t.amount) : -Number(t.amount))
+        )
+      }, 0) || 0
 
     setStats({
       totalClients: clientsCount || 0,
       todayAppointments: todayCount || 0,
-      revenue: monthlyRevenue,
+      revenue: revenue,
     })
+
     setPendingAppointments((pending as Appointment[]) || [])
     setLoading(false)
   }
@@ -124,8 +135,10 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Panel</h1>
-        <p className="text-gray-600 mt-1">Tekrar hoş geldiniz!</p>
+        <h1 className="text-3xl font-bold text-gray-900">
+          {userName ? `Hoşgeldin, ${userName}` : 'Panelim'}
+        </h1>
+        <p className="text-gray-600 mt-1">İşte bugünkü özetiniz</p>
       </div>
 
       {/* Stats Cards */}
@@ -161,34 +174,38 @@ export default function DashboardPage() {
         <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Gelir</p>
+              <p className="text-sm text-gray-600">Bu Ay Gelir</p>
               <p className="text-3xl font-bold text-gray-900 mt-2">
-                ₺{stats.revenue.toLocaleString()}
+                ₺{stats.revenue.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
               </p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-purple-600" />
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <DollarSign className="w-6 h-6 text-yellow-600" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Pending Appointments */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-5 h-5 text-orange-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Bekleyen Randevu Talepleri
-            </h2>
+      {pendingAppointments.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-5 h-5 text-orange-600" />
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Bekleyen Randevu Talepleri
+                </h2>
+              </div>
+              <Link
+                href="/calendar"
+                className="text-sm text-green-600 hover:text-green-700 font-medium"
+              >
+                Tümünü Gör
+              </Link>
+            </div>
           </div>
-        </div>
-        <div className="p-6">
-          {pendingAppointments.length === 0 ? (
-            <p className="text-gray-500 text-center py-8">
-              Bekleyen randevu talebi yok
-            </p>
-          ) : (
+          <div className="p-6">
             <div className="space-y-4">
               {pendingAppointments.map((appointment) => (
                 <div
@@ -202,15 +219,15 @@ export default function DashboardPage() {
                           appointment.guest_name ||
                           'Misafir'}
                       </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {appointment.guest_phone && (
-                          <span>Telefon: {appointment.guest_phone}</span>
-                        )}
-                      </p>
+                      {appointment.guest_phone && (
+                        <p className="text-sm text-gray-600 mt-1">
+                          Telefon: {appointment.guest_phone}
+                        </p>
+                      )}
                       <p className="text-sm text-gray-600">
                         {format(
                           new Date(appointment.start_time),
-                          'PPpp',
+                          'd MMMM yyyy, HH:mm',
                           { locale: tr }
                         )}
                       </p>
@@ -237,9 +254,16 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {pendingAppointments.length === 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+          <Clock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+          <p className="text-gray-500">Bekleyen randevu talebi yok</p>
+        </div>
+      )}
     </div>
   )
 }

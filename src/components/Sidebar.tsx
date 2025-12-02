@@ -40,7 +40,7 @@ export default function Sidebar({
 
   const navItems = [
     {
-      href: '/',
+      href: '/dashboard',
       label: 'Panel',
       icon: LayoutDashboard,
     },

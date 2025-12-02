@@ -2,13 +2,15 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
-  // Public booking pages don't require auth - handled client-side
-  if (req.nextUrl.pathname.startsWith('/book/')) {
-    return NextResponse.next()
-  }
+  // Public routes that don't require authentication
+  const publicRoutes = ['/', '/book/', '/login', '/subscription']
+  
+  // Check if the pathname starts with any public route
+  const isPublicRoute = publicRoutes.some(route => 
+    req.nextUrl.pathname === route || req.nextUrl.pathname.startsWith(route)
+  )
 
-  // Allow auth pages
-  if (req.nextUrl.pathname.startsWith('/login')) {
+  if (isPublicRoute) {
     return NextResponse.next()
   }
 

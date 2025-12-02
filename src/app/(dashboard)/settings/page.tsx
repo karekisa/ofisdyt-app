@@ -149,7 +149,7 @@ export default function SettingsPage() {
                   onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
                 />
               </div>
-              <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700">Profili Güncelle</Button>
+              <Button type="submit" className="w-full">Profili Güncelle</Button>
             </form>
           </CardContent>
         </Card>
@@ -165,7 +165,7 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Randevu Linki (Slug)</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm">ceprandevu.com/book/</span>
+                  <span className="text-gray-500 text-sm">ofisdyt.com/book/</span>
                   <Input 
                     value={profile.public_slug || ''} 
                     onChange={(e) => setProfile({ ...profile, public_slug: e.target.value })}
