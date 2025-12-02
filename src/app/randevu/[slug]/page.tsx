@@ -38,13 +38,23 @@ async function fetchProfileBySlug(slug: string) {
 }
 
 // Dynamic metadata generation for SEO
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
-    const { profile, error } = await fetchProfileBySlug(params.slug)
+    // CRITICAL: In Next.js 15+, params is a Promise and must be awaited
+    const { slug } = await params
+    
+    if (!slug) {
+      return {
+        title: 'Diyetisyen Bulunamadı',
+        description: 'Aradığınız diyetisyen bulunamadı.',
+      }
+    }
+    
+    const { profile, error } = await fetchProfileBySlug(slug)
     
     // Server-side debugging (only in development)
     if (process.env.NODE_ENV === 'development') {
-      console.log('[generateMetadata] Searching for slug:', params.slug)
+      console.log('[generateMetadata] Searching for slug:', slug)
       console.log('[generateMetadata] Found profile:', profile ? 'Yes' : 'No')
       if (error) {
         console.error('[generateMetadata] Supabase error:', error)
@@ -73,7 +83,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
         title,
         description,
         type: 'website',
-        url: `https://diyetlik.com.tr/randevu/${params.slug}`,
+        url: `https://diyetlik.com.tr/randevu/${slug}`,
         images: [
           {
             url: '/logo.png',
@@ -155,19 +165,29 @@ function DebugErrorComponent({ slug, error, normalizedSlug }: { slug: string; er
   )
 }
 
-export default async function BookingPage({ params }: { params: { slug: string } }) {
+export default async function BookingPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
-    // Validate params
-    if (!params?.slug) {
-      return <DebugErrorComponent slug="" error={{ message: 'Slug parameter is missing' }} normalizedSlug="" />
+    // CRITICAL: In Next.js 15+, params is a Promise and must be awaited
+    const { slug } = await params
+    
+    // Validate slug parameter
+    if (!slug || typeof slug !== 'string' || slug.trim().length === 0) {
+      console.error('[BookingPage] Slug parameter is missing or invalid:', slug)
+      return (
+        <DebugErrorComponent 
+          slug="" 
+          error={{ message: 'Slug parameter is missing or invalid' }} 
+          normalizedSlug="" 
+        />
+      )
     }
 
     // Fetch profile data on server-side
-    const { profile, error, normalizedSlug } = await fetchProfileBySlug(params.slug)
+    const { profile, error, normalizedSlug } = await fetchProfileBySlug(slug)
     
     // Server-side debugging
     if (process.env.NODE_ENV === 'development') {
-      console.log('[BookingPage] Server-side fetch - Slug:', params.slug)
+      console.log('[BookingPage] Server-side fetch - Slug:', slug)
       console.log('[BookingPage] Normalized slug:', normalizedSlug)
       console.log('[BookingPage] Profile found:', profile ? 'Yes' : 'No')
       if (error) {
@@ -178,13 +198,19 @@ export default async function BookingPage({ params }: { params: { slug: string }
     // CRITICAL: If profile is null, DO NOT try to access profile properties
     // Render error component immediately
     if (!profile) {
-      return <DebugErrorComponent slug={params.slug} error={error} normalizedSlug={normalizedSlug} />
+      return <DebugErrorComponent slug={slug} error={error} normalizedSlug={normalizedSlug} />
     }
 
     // Validate profile has required fields before passing to client
     if (!profile.id) {
       console.error('[BookingPage] Profile missing required id field')
-      return <DebugErrorComponent slug={params.slug} error={{ message: 'Profile data is invalid' }} normalizedSlug={normalizedSlug} />
+      return (
+        <DebugErrorComponent 
+          slug={slug} 
+          error={{ message: 'Profile data is invalid' }} 
+          normalizedSlug={normalizedSlug} 
+        />
+      )
     }
 
     // Pass normalized slug to client component
@@ -192,14 +218,25 @@ export default async function BookingPage({ params }: { params: { slug: string }
   } catch (err) {
     // Catch any unexpected errors and show error component
     console.error('[BookingPage] Exception:', err)
+    
+    // Try to get slug from params if possible (for error display)
+    let errorSlug = ''
+    try {
+      const { slug } = await params
+      errorSlug = slug || ''
+    } catch {
+      // If params await fails, use empty string
+      errorSlug = ''
+    }
+    
     return (
       <DebugErrorComponent 
-        slug={params?.slug || ''} 
+        slug={errorSlug} 
         error={{ 
           message: err instanceof Error ? err.message : 'Unexpected server error',
           code: 'SERVER_EXCEPTION'
         }} 
-        normalizedSlug={params?.slug?.toLowerCase().trim() || ''} 
+        normalizedSlug={errorSlug.toLowerCase().trim()} 
       />
     )
   }
