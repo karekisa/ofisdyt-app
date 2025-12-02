@@ -12,7 +12,9 @@ export default function SubscriptionPage() {
   const [profile, setProfile] = useState<{
     subscription_status: string | null
     subscription_ends_at: string | null
+    trial_ends_at: string | null
   } | null>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
 
   useEffect(() => {
     loadProfile()
@@ -30,7 +32,7 @@ export default function SubscriptionPage() {
 
     const { data } = await supabase
       .from('profiles')
-      .select('subscription_status, subscription_ends_at')
+      .select('subscription_status, subscription_ends_at, trial_ends_at')
       .eq('id', user.id)
       .single()
 
@@ -38,14 +40,18 @@ export default function SubscriptionPage() {
       setProfile(data)
     }
 
+    if (user.email) {
+      setUserEmail(user.email)
+    }
+
     setLoading(false)
   }
 
   const getWhatsAppUrl = (plan: 'monthly' | 'yearly') => {
     const planName = plan === 'monthly' ? 'Aylık' : 'Yıllık'
-    const message = `Merhaba, ${planName} abonelik paketi hakkında bilgi almak istiyorum.`
+    const message = `Merhaba, Diyetlik ${planName} paketi satın almak istiyorum. Mail: ${userEmail}`
     // Replace with your WhatsApp business number
-    const phone = '905551234567' // This should be your support WhatsApp number
+    const phone = '905555555555' // This should be your support WhatsApp number
     return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`
   }
 
@@ -68,40 +74,66 @@ export default function SubscriptionPage() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/"
+            href="/dashboard"
             className="inline-flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-4"
           >
             <ArrowLeft className="w-5 h-5" />
             <span>Panele Dön</span>
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Abonelik Paketleri
+            Abonelik Durumu
           </h1>
           <p className="text-gray-600">
             İhtiyacınıza uygun paketi seçin ve WhatsApp üzerinden iletişime geçin
           </p>
         </div>
 
-        {/* Current Status */}
-        {isActive && profile?.subscription_ends_at && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8">
-            <div className="flex items-center space-x-2">
-              <Check className="w-5 h-5 text-green-600" />
-              <div>
-                <p className="font-semibold text-green-900">Aktif Abonelik</p>
-                <p className="text-sm text-green-700">
-                  Aboneliğiniz{' '}
+        {/* Current Status Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Mevcut Durum</h2>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-600">Durum:</span>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                profile?.subscription_status === 'active'
+                  ? 'bg-green-100 text-green-800'
+                  : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+                    ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-800'
+              }`}>
+                {profile?.subscription_status === 'active'
+                  ? 'Aktif'
+                  : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+                    ? 'Deneme'
+                    : 'Süresi Dolmuş'}
+              </span>
+            </div>
+            {profile?.subscription_ends_at && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Bitiş Tarihi:</span>
+                <span className="text-sm font-medium text-gray-900">
                   {new Date(profile.subscription_ends_at).toLocaleDateString('tr-TR', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
-                  })}{' '}
-                  tarihine kadar geçerlidir.
-                </p>
+                  })}
+                </span>
               </div>
-            </div>
+            )}
+            {profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date() && !isActive && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Deneme Bitiş:</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {new Date(profile.trial_ends_at).toLocaleDateString('tr-TR', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </span>
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -110,7 +142,7 @@ export default function SubscriptionPage() {
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Aylık Paket</h2>
               <div className="mb-4">
-                <span className="text-5xl font-bold text-gray-900">₺299</span>
+                <span className="text-5xl font-bold text-gray-900">₺499</span>
                 <span className="text-gray-600 ml-2">/ay</span>
               </div>
               <p className="text-gray-600 text-sm">
@@ -156,7 +188,7 @@ export default function SubscriptionPage() {
               className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg"
             >
               <MessageSquare className="w-5 h-5" />
-              <span>WhatsApp ile İletişime Geç</span>
+              <span>WhatsApp ile Satın Al</span>
             </a>
           </div>
 
@@ -168,13 +200,13 @@ export default function SubscriptionPage() {
             <div className="text-center mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Yıllık Paket</h2>
               <div className="mb-4">
-                <span className="text-5xl font-bold text-gray-900">₺2,990</span>
+                <span className="text-5xl font-bold text-gray-900">₺4,999</span>
                 <span className="text-gray-600 ml-2">/yıl</span>
               </div>
               <div className="mb-2">
-                <span className="text-lg text-gray-500 line-through">₺3,588</span>
+                <span className="text-lg text-gray-500 line-through">₺5,988</span>
                 <span className="text-green-600 font-semibold ml-2">
-                  %17 tasarruf
+                  %15 tasarruf
                 </span>
               </div>
               <p className="text-gray-600 text-sm">
@@ -226,7 +258,7 @@ export default function SubscriptionPage() {
               className="w-full flex items-center justify-center space-x-2 px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-lg"
             >
               <MessageSquare className="w-5 h-5" />
-              <span>WhatsApp ile İletişime Geç</span>
+              <span>WhatsApp ile Satın Al</span>
             </a>
           </div>
         </div>

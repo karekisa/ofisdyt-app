@@ -86,7 +86,7 @@ export default function AdminPage() {
       .single()
 
     if (!profile || !profile.is_admin) {
-      router.push('/')
+      router.push('/dashboard')
       return
     }
 

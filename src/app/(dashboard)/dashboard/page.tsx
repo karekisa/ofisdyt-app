@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Calendar, DollarSign, Clock, Link as LinkIcon, Copy, Check } from 'lucide-react'
+import { Users, Calendar, DollarSign, Clock, Link as LinkIcon, Copy, Check, ExternalLink, Share2 } from 'lucide-react'
 import Link from 'next/link'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -270,46 +270,72 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Booking Link Share Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      {/* Personal Booking Link Hero Card */}
+      <div className="bg-gradient-to-br from-teal-50 to-green-50 rounded-xl shadow-lg border-2 border-teal-200 p-6 md:p-8">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-2">
-            <LinkIcon className="w-5 h-5 text-green-600" />
-            <h2 className="text-xl font-semibold text-gray-900">
-              Randevu Linkiniz
-            </h2>
+          <div className="flex items-center space-x-3">
+            <div className="w-12 h-12 bg-teal-600 rounded-lg flex items-center justify-center">
+              <LinkIcon className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">
+                Kişisel Randevu Sayfanız
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Danışanlarınız bu linkten randevu alabilir
+              </p>
+            </div>
           </div>
           <Link
             href="/settings"
-            className="text-sm text-green-600 hover:text-green-700 font-medium"
+            className="text-sm text-teal-600 hover:text-teal-700 font-medium hidden md:block"
           >
             Ayarlardan Düzenle
           </Link>
         </div>
         {publicSlug ? (
-          <div className="space-y-3">
-            <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <code className="flex-1 text-sm text-gray-700 font-mono">
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 bg-white rounded-lg border-2 border-teal-200 shadow-sm">
+              <code className="flex-1 text-sm md:text-base text-gray-900 font-mono break-all">
                 diyetlik.com/book/{publicSlug}
               </code>
-              <CopyButton text={`https://diyetlik.com/book/${publicSlug}`} />
+              <div className="flex items-center gap-2">
+                <CopyButton text={`https://diyetlik.com/book/${publicSlug}`} />
+                <a
+                  href={`https://diyetlik.com/book/${publicSlug}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium text-sm"
+                  title="Sayfaya Git"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sayfaya Git</span>
+                </a>
+                <ShareButton url={`https://diyetlik.com/book/${publicSlug}`} />
+              </div>
             </div>
             <p className="text-sm text-gray-600">
               Bu linki danışanlarınızla paylaşarak randevu almalarını sağlayabilirsiniz.
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-gray-600">
-              Randevu linkinizi oluşturmak için ayarlar sayfasından bir slug belirleyin.
-            </p>
-            <Link
-              href="/settings"
-              className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              <LinkIcon className="w-4 h-4" />
-              <span>Link Oluştur</span>
-            </Link>
+          <div className="space-y-4">
+            <div className="bg-white rounded-lg border-2 border-dashed border-teal-300 p-6 text-center">
+              <LinkIcon className="w-12 h-12 text-teal-400 mx-auto mb-3" />
+              <p className="text-gray-700 font-medium mb-2">
+                Randevu linkiniz henüz oluşturulmamış
+              </p>
+              <p className="text-sm text-gray-600 mb-4">
+                Ayarlar sayfasından bir slug belirleyerek linkinizi oluşturun.
+              </p>
+              <Link
+                href="/settings"
+                className="inline-flex items-center space-x-2 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
+              >
+                <LinkIcon className="w-5 h-5" />
+                <span>Link Oluştur</span>
+              </Link>
+            </div>
           </div>
         )}
       </div>
@@ -334,7 +360,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+      className="p-2 hover:bg-gray-200 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
       title="Kopyala"
     >
       {copied ? (
@@ -342,6 +368,45 @@ function CopyButton({ text }: { text: string }) {
       ) : (
         <Copy className="w-4 h-4 text-gray-600" />
       )}
+    </button>
+  )
+}
+
+function ShareButton({ url }: { url: string }) {
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Randevu Sayfam',
+          text: 'Randevu almak için bu linki kullanabilirsiniz',
+          url: url,
+        })
+        toast.success('Paylaşıldı!')
+      } catch (err) {
+        // User cancelled or error
+        if ((err as Error).name !== 'AbortError') {
+          toast.error('Paylaşım başarısız')
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success('Link kopyalandı!')
+      } catch (err) {
+        toast.error('Kopyalama başarısız')
+      }
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      className="inline-flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm min-h-[44px]"
+      title="Paylaş"
+    >
+      <Share2 className="w-4 h-4" />
+      <span className="hidden sm:inline">Paylaş</span>
     </button>
   )
 }
