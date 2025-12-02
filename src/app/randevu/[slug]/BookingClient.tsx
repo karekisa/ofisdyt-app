@@ -48,12 +48,13 @@ export default function BookingClient({ slug }: BookingClientProps) {
       // Client-side debugging
       console.log('[BookingClient] Client-side fetch - Searching for slug:', normalizedSlug)
       
-      // Robust query: Select explicit fields only, use ILIKE for case-insensitive matching
+      // Robust query: Try both exact match and case-insensitive match
       // DO NOT select '*' or join auth.users - this causes permission errors for public users
+      // Use .or() to try both exact and case-insensitive matching
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration, phone, website, avatar_url')
-        .ilike('public_slug', normalizedSlug) // Use ILIKE for case-insensitive match
+        .or(`public_slug.eq.${normalizedSlug},public_slug.ilike.${normalizedSlug}`) // Try exact and case-insensitive
         .maybeSingle()
 
       // Client-side debugging

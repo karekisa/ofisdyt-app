@@ -1,6 +1,44 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
+/**
+ * Convert text to URL-friendly slug
+ * Handles Turkish characters and special cases
+ * @param text - Text to convert to slug
+ * @returns URL-friendly slug (lowercase, dashes, alphanumeric)
+ * 
+ * @example
+ * slugify("Dr. Furkan Şahin") // "dr-furkan-sahin"
+ * slugify("Dyt. Ayşe Özkan") // "dyt-ayse-ozkan"
+ */
+export function slugify(text: string | null | undefined): string {
+  if (!text) return ''
+  
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    // Turkish character replacements
+    .replace(/ı/g, 'i')
+    .replace(/ş/g, 's')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/İ/g, 'i')
+    .replace(/Ş/g, 's')
+    .replace(/Ğ/g, 'g')
+    .replace(/Ü/g, 'u')
+    .replace(/Ö/g, 'o')
+    .replace(/Ç/g, 'c')
+    // Remove special characters except spaces, dashes, underscores
+    .replace(/[^a-z0-9\s_-]/g, '')
+    // Replace spaces and multiple dashes/underscores with single dash
+    .replace(/[\s_-]+/g, '-')
+    // Remove leading/trailing dashes
+    .replace(/^-+|-+$/g, '')
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }

@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Profile } from '@/lib/types'
-import { Eye, ExternalLink } from 'lucide-react'
+import { Eye, ExternalLink, Link as LinkIcon } from 'lucide-react'
+import { slugify } from '@/lib/utils'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -51,6 +52,14 @@ export default function SettingsPage() {
     if (!profile) return
 
     try {
+      // Auto-generate slug from full_name if public_slug is empty
+      let updatedSlug = profile.public_slug
+      if (!updatedSlug && profile.full_name) {
+        updatedSlug = slugify(profile.full_name)
+        // Update local state with generated slug
+        setProfile({ ...profile, public_slug: updatedSlug })
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -59,11 +68,18 @@ export default function SettingsPage() {
           phone: profile.phone,
           bio: profile.bio,
           website: profile.website,
+          // Auto-save generated slug if it was created
+          ...(updatedSlug && !profile.public_slug ? { public_slug: updatedSlug } : {}),
         })
         .eq('id', profile.id)
 
       if (error) throw error
       toast.success('Profil bilgileri güncellendi')
+      
+      // If slug was auto-generated, show a message
+      if (updatedSlug && !profile.public_slug) {
+        toast.info(`Randevu linkiniz otomatik oluşturuldu: ${updatedSlug}`)
+      }
     } catch (error) {
       toast.error('Güncelleme başarısız oldu')
       console.error(error)
@@ -75,11 +91,16 @@ export default function SettingsPage() {
     if (!profile) return
 
     try {
-      // CRITICAL: Sanitize slug - convert to lowercase and trim whitespace
+      // CRITICAL: Auto-generate slug from full_name if empty
+      let finalSlug = profile.public_slug
+      if (!finalSlug && profile.full_name) {
+        finalSlug = slugify(profile.full_name)
+        toast.info(`Slug otomatik oluşturuldu: ${finalSlug}`)
+      }
+
+      // CRITICAL: Sanitize slug using slugify function
       // This ensures consistent slug format and prevents case-sensitivity issues
-      const sanitizedSlug = profile.public_slug 
-        ? profile.public_slug.toLowerCase().trim().replace(/\s+/g, '-') // Replace spaces with hyphens
-        : null
+      const sanitizedSlug = finalSlug ? slugify(finalSlug) : null
 
       // Validate slug format (alphanumeric, hyphens, underscores only)
       if (sanitizedSlug && !/^[a-z0-9_-]+$/.test(sanitizedSlug)) {
@@ -141,8 +162,26 @@ export default function SettingsPage() {
                 <Label>Ad Soyad</Label>
                 <Input 
                   value={profile.full_name || ''} 
-                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                  onChange={(e) => {
+                    const newFullName = e.target.value
+                    // Auto-generate slug if public_slug is empty
+                    let newSlug = profile.public_slug
+                    if (!newSlug && newFullName) {
+                      newSlug = slugify(newFullName)
+                    }
+                    setProfile({ 
+                      ...profile, 
+                      full_name: newFullName,
+                      ...(newSlug && !profile.public_slug ? { public_slug: newSlug } : {})
+                    })
+                  }}
+                  placeholder="Dr. Furkan Şahin"
                 />
+                {!profile.public_slug && profile.full_name && (
+                  <p className="text-xs text-blue-600">
+                    💡 Slug otomatik oluşturulacak: <code className="bg-blue-50 px-1 rounded">{slugify(profile.full_name)}</code>
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>Klinik Adı</Label>
@@ -196,18 +235,34 @@ export default function SettingsPage() {
                       <Input 
                         value={profile.public_slug || ''} 
                         onChange={(e) => {
-                          // Auto-sanitize on input: lowercase and remove spaces
-                          const value = e.target.value.toLowerCase().trim().replace(/\s+/g, '-')
+                          // Auto-sanitize on input using slugify function
+                          const value = slugify(e.target.value)
                           setProfile({ ...profile, public_slug: value })
                         }}
-                        placeholder="ornek-slug"
+                        placeholder={profile.full_name ? slugify(profile.full_name) : "ornek-slug"}
                         pattern="[a-z0-9_-]+"
                         title="Sadece küçük harf, rakam, tire (-) ve alt çizgi (_) kullanın"
                       />
                     </div>
-                    <p className="text-xs text-gray-500">
-                      Örnek: dr-furkan, diyetisyen-ayse (küçük harf, tire veya alt çizgi kullanın)
-                    </p>
+                    {/* Live Preview of Generated Link */}
+                    {(profile.public_slug || (profile.full_name && !profile.public_slug)) && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center space-x-2 text-sm">
+                          <LinkIcon className="w-4 h-4 text-green-600 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-green-700 font-medium mb-1">Randevu Linkiniz:</p>
+                            <code className="text-xs text-green-900 break-all">
+                              diyetlik.com.tr/randevu/{profile.public_slug || slugify(profile.full_name || '')}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {!profile.public_slug && !profile.full_name && (
+                      <p className="text-xs text-gray-500">
+                        💡 Ad Soyad alanını doldurduğunuzda slug otomatik oluşturulacak
+                      </p>
+                    )}
                 <Button
                   type="button"
                   variant="outline"

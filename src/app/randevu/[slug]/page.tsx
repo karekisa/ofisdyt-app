@@ -5,17 +5,18 @@ import BookingClient from './BookingClient'
 // Robust query function to fetch profile by slug
 async function fetchProfileBySlug(slug: string) {
   // Normalize slug: lowercase and trim
-  const normalizedSlug = slug.toLowerCase().trim()
+  const searchSlug = slug.toLowerCase().trim()
   
-  // Robust query: Select explicit fields only, use ILIKE for case-insensitive matching
+  // Robust query: Try both exact match and case-insensitive match
   // DO NOT join auth.users - this causes permission errors for public users
+  // Use .or() to try both exact and case-insensitive matching
   const { data: profile, error } = await supabase
     .from('profiles')
-    .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration')
-    .ilike('public_slug', normalizedSlug) // Case-insensitive match
+    .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration, phone, website, avatar_url')
+    .or(`public_slug.eq.${searchSlug},public_slug.ilike.${searchSlug}`) // Try exact and case-insensitive
     .maybeSingle()
 
-  return { profile, error, normalizedSlug }
+  return { profile, error, normalizedSlug: searchSlug }
 }
 
 // Dynamic metadata generation for SEO
