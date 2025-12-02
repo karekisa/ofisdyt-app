@@ -64,7 +64,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         mobileOpen={mobileMenuOpen}
@@ -73,7 +73,7 @@ export default function DashboardLayout({
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64 pb-16 lg:pb-0">
+      <div className="flex-1 flex flex-col ml-0 lg:ml-64 pb-16 lg:pb-0 overflow-y-auto">
         {/* Mobile Header */}
         <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <button
