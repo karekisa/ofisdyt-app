@@ -1,22 +1,60 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { MessageSquare, Calendar, TrendingUp, Check, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function LandingPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Diyetlik",
+    "applicationCategory": "HealthApplication",
+    "operatingSystem": "Web",
+    "offers": {
+      "@type": "Offer",
+      "price": "499",
+      "priceCurrency": "TRY",
+      "priceValidUntil": "2025-12-31",
+      "availability": "https://schema.org/InStock"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.8",
+      "ratingCount": "150"
+    },
+    "description": "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
+    "featureList": [
+      "WhatsApp Entegrasyonu",
+      "Akıllı Randevu Yönetimi",
+      "Gelişim Takibi",
+      "Finansal Takip",
+      "Danışan Yönetimi"
+    ]
+  }
+
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <div className="min-h-screen bg-white">
       {/* Header/Navbar */}
       <header className="border-b border-gray-200 sticky top-0 bg-white z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
+            <Link href="/" className="flex items-center">
+              <Image 
+                src="/logo.png" 
+                alt="Diyetlik Logo" 
+                width={140} 
+                height={40} 
+                className="object-contain h-8 w-auto" 
+                priority 
+              />
             </Link>
 
             {/* Navigation */}
@@ -433,6 +471,7 @@ export default function LandingPage() {
         </div>
       </footer>
     </div>
+    </>
   )
 }
 

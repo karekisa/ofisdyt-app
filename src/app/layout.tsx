@@ -13,8 +13,59 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Diyetlik | Diyetisyenler İçin Dijital Asistan",
-  description: "Randevu, danışan takibi ve diyet listesi gönderimi artık tek uygulamada. Diyetlik ile kliniğinizi cebinizden yönetin.",
+  metadataBase: new URL('https://diyetlik.com'),
+  title: {
+    default: "Diyetlik | Diyetisyen Asistanı",
+    template: "%s | Diyetlik",
+  },
+  description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
+  keywords: ["diyetisyen yazılımı", "klinik yönetim", "online randevu", "diyet takip programı", "ofisdyt", "diyetlik", "diyetisyen asistanı", "randevu yönetimi"],
+  authors: [{ name: "Diyetlik" }],
+  creator: "Diyetlik",
+  publisher: "Diyetlik",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    type: "website",
+    locale: "tr_TR",
+    url: "https://diyetlik.com",
+    siteName: "Diyetlik",
+    title: "Diyetlik | Diyetisyen Asistanı",
+    description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
+    images: [
+      {
+        url: "/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "Diyetlik Logo",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Diyetlik | Diyetisyen Asistanı",
+    description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı.",
+    images: ["/logo.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    // Add your verification codes here when available
+    // google: 'your-google-verification-code',
+    // yandex: 'your-yandex-verification-code',
+  },
 };
 
 export default function RootLayout({

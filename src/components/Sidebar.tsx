@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -88,11 +89,15 @@ export default function Sidebar({
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <Link href="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
+            <Link href="/dashboard" className="flex items-center">
+              <Image 
+                src="/logo.png" 
+                alt="Diyetlik Logo" 
+                width={140} 
+                height={40} 
+                className="object-contain h-8 w-auto" 
+                priority 
+              />
             </Link>
             {setMobileOpen && (
               <button

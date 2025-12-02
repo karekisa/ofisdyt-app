@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { Menu, LayoutDashboard, Users, Calendar, Wallet, Settings } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
@@ -81,11 +82,15 @@ export default function DashboardLayout({
           >
             <Menu className="w-6 h-6 text-gray-600" />
           </button>
-          <Link href="/dashboard" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">D</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
+          <Link href="/dashboard" className="flex items-center">
+            <Image 
+              src="/logo.png" 
+              alt="Diyetlik Logo" 
+              width={140} 
+              height={40} 
+              className="object-contain h-8 w-auto" 
+              priority 
+            />
           </Link>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>

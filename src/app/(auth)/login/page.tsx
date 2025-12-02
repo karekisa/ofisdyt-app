@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
@@ -105,11 +106,15 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">D</span>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Diyetlik</h1>
+          <div className="flex justify-center mb-6">
+            <Image 
+              src="/logo.png" 
+              alt="Diyetlik Logo" 
+              width={128} 
+              height={128} 
+              className="object-contain w-32 h-auto" 
+              priority 
+            />
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">
             {isSignUp ? 'Hesap Oluştur' : "Diyetlik'e Hoşgeldiniz"}
