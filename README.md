@@ -1,4 +1,4 @@
-# OfisDyt - Diyetisyenler İçin Dijital Asistan
+# Diyetlik - Diyetisyenler İçin Dijital Asistan
 
 Diyetisyenler için profesyonel danışan yönetimi, randevu takibi ve dijital asistan platformu. Next.js 14, Tailwind CSS ve Supabase ile geliştirilmiştir.
 

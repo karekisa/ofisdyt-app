@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "OfisDyt | Diyetisyenler İçin Dijital Asistan",
-  description: "Diyetisyenler için profesyonel danışan yönetimi, randevu takibi ve dijital asistan platformu",
+  title: "Diyetlik | Diyetisyenler İçin Dijital Asistan",
+  description: "Randevu, danışan takibi ve diyet listesi gönderimi artık tek uygulamada. Diyetlik ile kliniğinizi cebinizden yönetin.",
 };
 
 export default function RootLayout({
@@ -23,7 +23,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="tr">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

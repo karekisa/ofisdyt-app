@@ -290,9 +290,9 @@ export default function DashboardPage() {
           <div className="space-y-3">
             <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
               <code className="flex-1 text-sm text-gray-700 font-mono">
-                ofisdyt.com/book/{publicSlug}
+                diyetlik.com/book/{publicSlug}
               </code>
-              <CopyButton text={`https://ofisdyt.com/book/${publicSlug}`} />
+              <CopyButton text={`https://diyetlik.com/book/${publicSlug}`} />
             </div>
             <p className="text-sm text-gray-600">
               Bu linki danışanlarınızla paylaşarak randevu almalarını sağlayabilirsiniz.

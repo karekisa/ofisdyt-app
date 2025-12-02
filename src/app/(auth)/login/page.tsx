@@ -117,12 +117,12 @@ export default function LoginPage() {
         <div className="text-center">
           <div className="flex items-center justify-center space-x-2 mb-4">
             <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">O</span>
+              <span className="text-white font-bold text-xl">D</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">OfisDyt</h1>
+            <h1 className="text-2xl font-bold text-gray-900">Diyetlik</h1>
           </div>
           <h2 className="text-3xl font-extrabold text-gray-900">
-            {isSignUp ? 'Hesap Oluştur' : "OfisDyt'e Hoşgeldiniz"}
+            {isSignUp ? 'Hesap Oluştur' : "Diyetlik'e Hoşgeldiniz"}
           </h2>
           <p className="mt-2 text-sm text-gray-600">
             {isSignUp

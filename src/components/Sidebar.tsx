@@ -90,9 +90,9 @@ export default function Sidebar({
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">O</span>
+                <span className="text-white font-bold text-lg">D</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">OfisDyt</span>
+              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
             </Link>
             {setMobileOpen && (
               <button

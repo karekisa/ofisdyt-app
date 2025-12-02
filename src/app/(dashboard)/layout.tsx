@@ -82,10 +82,10 @@ export default function DashboardLayout({
             <Menu className="w-6 h-6 text-gray-600" />
           </button>
           <Link href="/dashboard" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">O</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">OfisDyt</span>
+              <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">D</span>
+              </div>
+              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
           </Link>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>

@@ -14,9 +14,9 @@ export default function LandingPage() {
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">O</span>
+                <span className="text-white font-bold text-lg">D</span>
               </div>
-              <span className="text-xl font-bold text-gray-900">OfisDyt</span>
+              <span className="text-xl font-bold text-gray-900">Diyetlik</span>
             </Link>
 
             {/* Navigation */}
@@ -42,7 +42,7 @@ export default function LandingPage() {
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
             Diyetisyenler İçin
             <br />
-            <span className="text-green-600">Dijital Asistan: OfisDyt</span>
+            <span className="text-green-600">Diyetlik: Diyetisyenin Dijital Kutusu</span>
           </h1>
           <p className="text-xl sm:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
             Randevularınızı yönetin, diyet listelerini WhatsApp'tan tek tuşla gönderin.
@@ -64,7 +64,7 @@ export default function LandingPage() {
                   <div className="w-24 h-24 bg-green-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
                     <Calendar className="w-12 h-12 text-green-600" />
                   </div>
-                  <p className="text-gray-500 text-sm">OfisDyt Dashboard Önizlemesi</p>
+                  <p className="text-gray-500 text-sm">Diyetlik Dashboard Önizlemesi</p>
                 </div>
               </div>
             </div>
@@ -77,7 +77,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
-              Neden OfisDyt?
+              Neden Diyetlik?
             </h2>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               Diyetisyenlerin işlerini kolaylaştıran özellikler
@@ -229,7 +229,7 @@ export default function LandingPage() {
             Hemen Başlayın
           </h2>
           <p className="text-xl text-green-50 mb-8 max-w-2xl mx-auto">
-            15 gün ücretsiz deneme ile OfisDyt'in tüm özelliklerini keşfedin.
+            15 gün ücretsiz deneme ile Diyetlik'in tüm özelliklerini keşfedin.
             Kredi kartı gerektirmez.
           </p>
           <Link href="/login">
@@ -248,9 +248,9 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">O</span>
+                  <span className="text-white font-bold text-lg">D</span>
                 </div>
-                <span className="text-xl font-bold text-white">OfisDyt</span>
+                <span className="text-xl font-bold text-white">Diyetlik</span>
               </div>
               <p className="text-sm text-gray-400">
                 Diyetisyenler için dijital asistan platformu
@@ -303,7 +303,7 @@ export default function LandingPage() {
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; {new Date().getFullYear()} OfisDyt. Tüm hakları saklıdır.</p>
+            <p>&copy; {new Date().getFullYear()} Diyetlik. Tüm hakları saklıdır.</p>
           </div>
         </div>
       </footer>
