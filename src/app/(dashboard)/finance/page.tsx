@@ -14,20 +14,22 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns'
+import { format, startOfMonth, endOfMonth, startOfYear, endOfYear, eachDayOfInterval, parseISO, getDate, getMonth } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import AddTransactionDialog from './AddTransactionDialog'
 import { Transaction } from '@/lib/types'
+import { paymentMethodMap, transactionTypeMap, formatCategoryName } from '@/lib/constants'
 
 export default function FinancePage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [chartView, setChartView] = useState<'monthly' | 'yearly'>('monthly')
 
   useEffect(() => {
     loadTransactions()
-  }, [])
+  }, [chartView])
 
   const loadTransactions = async () => {
     const {
@@ -39,9 +41,19 @@ export default function FinancePage() {
       return
     }
 
-    // Get current month date range
-    const currentMonthStart = startOfMonth(new Date())
-    const currentMonthEnd = endOfMonth(new Date())
+    // Load transactions based on chart view
+    let dateStart: Date
+    let dateEnd: Date
+
+    if (chartView === 'monthly') {
+      // Current month
+      dateStart = startOfMonth(new Date())
+      dateEnd = endOfMonth(new Date())
+    } else {
+      // Current year
+      dateStart = startOfYear(new Date())
+      dateEnd = endOfYear(new Date())
+    }
 
     const { data, error } = await supabase
       .from('transactions')
@@ -54,8 +66,8 @@ export default function FinancePage() {
       `
       )
       .eq('dietitian_id', user.id)
-      .gte('transaction_date', format(currentMonthStart, 'yyyy-MM-dd'))
-      .lte('transaction_date', format(currentMonthEnd, 'yyyy-MM-dd'))
+      .gte('transaction_date', format(dateStart, 'yyyy-MM-dd'))
+      .lte('transaction_date', format(dateEnd, 'yyyy-MM-dd'))
       .order('transaction_date', { ascending: false })
 
     if (error) {
@@ -72,7 +84,7 @@ export default function FinancePage() {
     setLoading(false)
   }
 
-  // Calculate stats for current month
+  // Calculate stats based on current view
   const stats = useMemo(() => {
     const income = transactions
       .filter((t) => (t.type as string) === 'income')
@@ -91,36 +103,84 @@ export default function FinancePage() {
     }
   }, [transactions])
 
-  // Prepare chart data (daily income/expense)
+  // Prepare chart data based on view (monthly: daily, yearly: monthly)
   const chartData = useMemo(() => {
-    const currentMonthStart = startOfMonth(new Date())
-    const currentMonthEnd = endOfMonth(new Date())
-    const days = eachDayOfInterval({
-      start: currentMonthStart,
-      end: currentMonthEnd,
-    })
+    if (chartView === 'monthly') {
+      // Monthly view: Daily breakdown for current month
+      const currentMonthStart = startOfMonth(new Date())
+      const currentMonthEnd = endOfMonth(new Date())
+      const days = eachDayOfInterval({
+        start: currentMonthStart,
+        end: currentMonthEnd,
+      })
 
-    return days.map((day) => {
-      const dayStr = format(day, 'yyyy-MM-dd')
-      const dayTransactions = transactions.filter(
-        (t) => t.transaction_date === dayStr
-      )
+      return days.map((day) => {
+        const dayStr = format(day, 'yyyy-MM-dd')
+        const dayTransactions = transactions.filter(
+          (t) => t.transaction_date === dayStr
+        )
 
-      const dayIncome = dayTransactions
-        .filter((t) => (t.type as string) === 'income')
-        .reduce((sum, t) => sum + Number(t.amount), 0)
+        const dayIncome = dayTransactions
+          .filter((t) => (t.type as string) === 'income')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
 
-      const dayExpense = dayTransactions
-        .filter((t) => (t.type as string) === 'expense')
-        .reduce((sum, t) => sum + Number(t.amount), 0)
+        const dayExpense = dayTransactions
+          .filter((t) => (t.type as string) === 'expense')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
 
-      return {
-        date: format(day, 'd MMM', { locale: tr }),
-        Gelir: dayIncome,
-        Gider: dayExpense,
-      }
-    })
-  }, [transactions])
+        return {
+          name: getDate(day).toString(), // Day number (1, 2, 3...)
+          income: dayIncome,
+          expense: dayExpense,
+        }
+      })
+    } else {
+      // Yearly view: Monthly breakdown for current year
+      const currentYear = new Date().getFullYear()
+      const months = Array.from({ length: 12 }, (_, i) => i) // 0-11
+
+      return months.map((monthIndex) => {
+        // Filter transactions for this month
+        const monthTransactions = transactions.filter((t) => {
+          const transactionDate = parseISO(t.transaction_date)
+          return (
+            transactionDate.getFullYear() === currentYear &&
+            transactionDate.getMonth() === monthIndex
+          )
+        })
+
+        const monthIncome = monthTransactions
+          .filter((t) => (t.type as string) === 'income')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
+
+        const monthExpense = monthTransactions
+          .filter((t) => (t.type as string) === 'expense')
+          .reduce((sum, t) => sum + Number(t.amount), 0)
+
+        // Turkish month names
+        const monthNames = [
+          'Oca',
+          'Şub',
+          'Mar',
+          'Nis',
+          'May',
+          'Haz',
+          'Tem',
+          'Ağu',
+          'Eyl',
+          'Eki',
+          'Kas',
+          'Ara',
+        ]
+
+        return {
+          name: monthNames[monthIndex],
+          income: monthIncome,
+          expense: monthExpense,
+        }
+      })
+    }
+  }, [transactions, chartView])
 
   const handleSuccess = () => {
     loadTransactions()
@@ -142,16 +202,11 @@ export default function FinancePage() {
   }
 
   const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case 'cash':
-        return 'Nakit'
-      case 'credit_card':
-        return 'Kredi Kartı'
-      case 'transfer':
-        return 'Havale/EFT'
-      default:
-        return method
-    }
+    return paymentMethodMap[method] || method
+  }
+
+  const getTransactionTypeLabel = (type: string) => {
+    return transactionTypeMap[type] || type
   }
 
   if (loading) {
@@ -172,7 +227,9 @@ export default function FinancePage() {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Finans</h1>
           <p className="text-gray-600 mt-1">
-            {format(new Date(), 'MMMM yyyy', { locale: tr })} Finansal Özeti
+            {chartView === 'monthly'
+              ? `${format(new Date(), 'MMMM yyyy', { locale: tr })} Finansal Özeti`
+              : `${format(new Date(), 'yyyy', { locale: tr })} Yıllık Finansal Özeti`}
           </p>
         </div>
         <button
@@ -259,13 +316,40 @@ export default function FinancePage() {
 
       {/* Chart Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Günlük Gelir/Gider Grafiği
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">
+            {chartView === 'monthly' ? 'Günlük Gelir/Gider Grafiği' : 'Aylık Gelir/Gider Grafiği'}
+          </h2>
+          
+          {/* View Toggle Buttons */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1 w-fit">
+            <button
+              onClick={() => setChartView('monthly')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                chartView === 'monthly'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Bu Ay
+            </button>
+            <button
+              onClick={() => setChartView('yearly')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                chartView === 'yearly'
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Bu Yıl
+            </button>
+          </div>
+        </div>
+        
         <ResponsiveContainer width="100%" height={300}>
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" />
+            <XAxis dataKey="name" />
             <YAxis />
             <Tooltip
               formatter={(value: number) =>
@@ -276,8 +360,8 @@ export default function FinancePage() {
               }
             />
             <Legend />
-            <Bar dataKey="Gelir" fill="#22c55e" name="Gelir" />
-            <Bar dataKey="Gider" fill="#ef4444" name="Gider" />
+            <Bar dataKey="income" fill="#16a34a" name="Gelir" />
+            <Bar dataKey="expense" fill="#dc2626" name="Gider" />
           </BarChart>
         </ResponsiveContainer>
       </div>
@@ -312,7 +396,7 @@ export default function FinancePage() {
                   key={transaction.id}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  <div className="flex items-center space-x-4 flex-1 min-w-0">
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                         (transaction.type as string) === 'income'
@@ -341,7 +425,7 @@ export default function FinancePage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
                         <p className="font-semibold text-gray-900">
-                          {transaction.category}
+                          {formatCategoryName(transaction.category)}
                         </p>
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
@@ -350,7 +434,7 @@ export default function FinancePage() {
                               : 'bg-red-100 text-red-700'
                           }`}
                         >
-                          {(transaction.type as string) === 'income' ? 'Gelir' : 'Gider'}
+                          {getTransactionTypeLabel(transaction.type as string)}
                         </span>
                       </div>
                       {transaction.description && (

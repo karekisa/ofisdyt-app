@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 export function middleware(req: NextRequest) {
   // Public routes that don't require authentication
-  const publicRoutes = ['/', '/book/', '/login', '/subscription']
+  const publicRoutes = ['/', '/randevu/', '/login', '/subscription']
   
   // Check if the pathname starts with any public route
   const isPublicRoute = publicRoutes.some(route => 

@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Profile } from '@/lib/types'
+import { Eye, ExternalLink } from 'lucide-react'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
@@ -80,7 +81,7 @@ export default function SettingsPage() {
           public_slug: profile.public_slug,
           work_start_hour: profile.work_start_hour,
           work_end_hour: profile.work_end_hour,
-          session_duration: profile.session_duration,
+          session_duration: 30, // Fixed to 30 minutes globally
         })
         .eq('id', profile.id)
 
@@ -90,6 +91,16 @@ export default function SettingsPage() {
       toast.error('Ayarlar kaydedilemedi')
       console.error(error)
     }
+  }
+
+  const handlePreviewBookingPage = () => {
+    if (!profile?.public_slug) {
+      toast.error('Lütfen önce bir slug belirleyin ve kaydedin')
+      return
+    }
+
+    const publicUrl = `https://diyetlik.com.tr/randevu/${profile.public_slug}`
+    window.open(publicUrl, '_blank', 'noopener,noreferrer')
   }
 
   if (loading) return <div className="p-8">Yükleniyor...</div>
@@ -165,12 +176,27 @@ export default function SettingsPage() {
               <div className="space-y-2">
                 <Label>Randevu Linki (Slug)</Label>
                 <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm">diyetlik.com/book/</span>
+                  <span className="text-gray-500 text-sm">diyetlik.com.tr/randevu/</span>
                   <Input 
                     value={profile.public_slug || ''} 
                     onChange={(e) => setProfile({ ...profile, public_slug: e.target.value })}
                   />
                 </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handlePreviewBookingPage}
+                  disabled={!profile.public_slug}
+                  className="w-full mt-2"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Sayfayı Önizle
+                </Button>
+                {!profile.public_slug && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Önizleme için önce bir slug belirleyin ve kaydedin
+                  </p>
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -209,21 +235,6 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Seans Süresi (Dakika)</Label>
-                <Select 
-                    value={String(profile.session_duration || '45')} 
-                    onValueChange={(val) => setProfile({ ...profile, session_duration: parseInt(val) })}
-                  >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="15">15 Dakika</SelectItem>
-                    <SelectItem value="30">30 Dakika</SelectItem>
-                    <SelectItem value="45">45 Dakika</SelectItem>
-                    <SelectItem value="60">60 Dakika (1 Saat)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               <Button type="submit" className="w-full" variant="outline">Ayarları Kaydet</Button>
             </form>

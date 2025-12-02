@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Plus, Calendar, Send, Trash2 } from 'lucide-react'
+import { Plus, Calendar, Send, Trash2, MessageCircle } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import DietListDialog from './DietListDialog'
+import { formatPhoneForWhatsapp } from '@/lib/utils'
+import { toast } from 'sonner'
 
 type DietList = {
   id: string
@@ -95,6 +97,27 @@ export default function DietListsTab({
     loadDietLists()
   }
 
+  const handleSendViaWhatsApp = (list: DietList, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent triggering edit
+
+    if (!clientPhone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const normalizedPhone = formatPhoneForWhatsapp(clientPhone)
+    if (!normalizedPhone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const dateStr = format(parseISO(list.created_at), 'd MMMM yyyy', { locale: tr })
+    const message = `Merhaba ${clientName}, 🥗 İşte ${dateStr} tarihli diyet listeniz:%0A%0A${encodeURIComponent(list.content)}%0A%0ASorularınız için buradayım! 👋`
+    const whatsappUrl = `https://wa.me/${normalizedPhone}?text=${message}`
+
+    window.open(whatsappUrl, '_blank')
+  }
+
   if (loading) {
     return (
       <div className="text-center py-8">
@@ -155,14 +178,26 @@ export default function DietListsTab({
                     {list.content}
                   </p>
                 </div>
-                <button
-                  onClick={(e) => handleDeleteList(list.id, e)}
-                  className="flex-shrink-0 text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
-                  aria-label="Listeyi sil"
-                  title="Listeyi sil"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {clientPhone && (
+                    <button
+                      onClick={(e) => handleSendViaWhatsApp(list, e)}
+                      className="bg-[#25D366] text-white hover:bg-[#20BA5A] p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                      aria-label="WhatsApp ile gönder"
+                      title="WhatsApp ile gönder"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={(e) => handleDeleteList(list.id, e)}
+                    className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors min-w-[44px] min-h-[44px] flex items-center justify-center"
+                    aria-label="Listeyi sil"
+                    title="Listeyi sil"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

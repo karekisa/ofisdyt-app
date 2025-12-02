@@ -25,7 +25,6 @@ export default function CalendarPage() {
   const [profile, setProfile] = useState<{
     work_start_hour: number
     work_end_hour: number
-    session_duration: number
   } | null>(null)
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [isAppointmentDialogOpen, setIsAppointmentDialogOpen] = useState(false)
@@ -50,7 +49,7 @@ export default function CalendarPage() {
     // Load profile for work hours
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('work_start_hour, work_end_hour, session_duration')
+      .select('work_start_hour, work_end_hour')
       .eq('id', user.id)
       .single()
 
@@ -58,7 +57,6 @@ export default function CalendarPage() {
       setProfile({
         work_start_hour: profileData.work_start_hour || 9,
         work_end_hour: profileData.work_end_hour || 17,
-        session_duration: profileData.session_duration || 60,
       })
     }
 

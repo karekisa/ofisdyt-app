@@ -17,6 +17,7 @@ import {
   CalendarMinus,
   MoreVertical,
   X,
+  HelpCircle,
 } from 'lucide-react'
 import { format, addMonths, subMonths } from 'date-fns'
 import { tr } from 'date-fns/locale'
@@ -295,13 +296,22 @@ export default function AdminPage() {
               <h1 className="text-3xl font-bold text-gray-900">Yönetici Paneli</h1>
               <p className="text-gray-600 mt-1">SaaS yönetim ve kullanıcı kontrolü</p>
             </div>
-            <Link
-              href="/"
-              className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Panele Dön</span>
-            </Link>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/admin/support-tickets"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                <HelpCircle className="w-4 h-4" />
+                <span>Destek Talepleri</span>
+              </Link>
+              <Link
+                href="/"
+                className="inline-flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-white rounded-lg transition-colors"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Panele Dön</span>
+              </Link>
+            </div>
           </div>
         </div>
 

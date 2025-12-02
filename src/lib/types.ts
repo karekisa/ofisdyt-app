@@ -9,6 +9,7 @@ export type AppointmentStatus = 'pending' | 'approved' | 'rejected' | 'completed
 export type PaymentMethod = 'cash' | 'credit_card' | 'transfer'
 export type Profession = 'dietitian' | 'psychologist' | 'pt' | 'consultant'
 export type SubscriptionStatus = 'active' | 'expired' | 'suspended'
+export type SupportTicketStatus = 'pending' | 'in_progress' | 'solved'
 
 // ============================================================================
 // APPLICATION INTERFACES (Exported for use across the app)
@@ -60,6 +61,21 @@ export interface Client {
   gender: string | null
   notes: string | null
   created_at: string
+}
+
+export interface SupportTicket {
+  id: string
+  user_id: string
+  title: string
+  message: string
+  status: SupportTicketStatus
+  created_at: string
+  // Optional nested user data from joins
+  profiles?: {
+    id: string
+    full_name: string | null
+    email?: string
+  } | null
 }
 
 export interface Measurement {

@@ -1,4 +1,4 @@
-import { addMinutes, format, startOfDay } from 'date-fns'
+import { generateTimeSlotsFromHours } from '@/lib/time-utils'
 
 /**
  * Generate time slots based on work hours and session duration
@@ -6,33 +6,16 @@ import { addMinutes, format, startOfDay } from 'date-fns'
  * @param workEndHour - End hour (0-23)
  * @param sessionDuration - Duration in minutes (e.g., 15, 30, 45, 60)
  * @returns Array of time strings in "HH:mm" format
+ * 
+ * @deprecated This function is kept for backward compatibility.
+ * Use generateTimeSlotsFromHours from '@/lib/time-utils' instead.
  */
 export function generateTimeSlots(
   workStartHour: number,
   workEndHour: number,
   sessionDuration: number
 ): string[] {
-  const slots: string[] = []
-  const baseDate = startOfDay(new Date())
-  let currentTime = new Date(baseDate)
-  currentTime.setHours(workStartHour, 0, 0, 0)
-
-  const endTime = new Date(baseDate)
-  endTime.setHours(workEndHour, 0, 0, 0)
-
-  while (currentTime < endTime) {
-    const slotEndTime = addMinutes(currentTime, sessionDuration)
-
-    // Check if slot would exceed end time
-    if (slotEndTime > endTime) {
-      break
-    }
-
-    slots.push(format(currentTime, 'HH:mm'))
-    currentTime = addMinutes(currentTime, sessionDuration)
-  }
-
-  return slots
+  return generateTimeSlotsFromHours(workStartHour, workEndHour, sessionDuration)
 }
 
 /**

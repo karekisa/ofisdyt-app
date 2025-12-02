@@ -113,7 +113,7 @@ See `supabase-schema.sql` for the complete schema with Row Level Security polici
 ### Public Booking
 
 - Dietitians can set a unique `public_slug` in settings
-- Clients can book appointments via `/book/[slug]`
+- Clients can book appointments via `/randevu/[slug]`
 - Appointments are created with `pending` status for approval
 
 ## Deployment

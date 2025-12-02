@@ -10,6 +10,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Client } from '@/lib/types'
+import { checkAppointmentConflict } from '@/lib/utils'
+import { generateTimeSlotsFromHours } from '@/lib/time-utils'
+import { toast } from 'sonner'
 
 type AppointmentDialogProps = {
   isOpen: boolean
@@ -27,6 +30,11 @@ export default function AppointmentDialog({
   const [loading, setLoading] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+  const [workHours, setWorkHours] = useState<{
+    work_start_hour: number
+    work_end_hour: number
+  } | null>(null)
+  const [timeSlots, setTimeSlots] = useState<string[]>([])
   const [formData, setFormData] = useState({
     client_id: '',
     guest_name: '',
@@ -39,6 +47,7 @@ export default function AppointmentDialog({
   useEffect(() => {
     if (isOpen) {
       loadClients()
+      loadWorkHours()
       if (selectedDate) {
         setFormData((prev) => ({
           ...prev,
@@ -47,6 +56,22 @@ export default function AppointmentDialog({
       }
     }
   }, [isOpen, selectedDate])
+
+  useEffect(() => {
+    if (workHours) {
+      // Fixed 30-minute session duration globally
+      const slots = generateTimeSlotsFromHours(
+        workHours.work_start_hour,
+        workHours.work_end_hour,
+        30 // Fixed to 30 minutes
+      )
+      setTimeSlots(slots)
+      // Reset time if current selection is not in the new slots
+      if (formData.time && !slots.includes(formData.time)) {
+        setFormData((prev) => ({ ...prev, time: '' }))
+      }
+    }
+  }, [workHours])
 
   const loadClients = async () => {
     const {
@@ -63,6 +88,33 @@ export default function AppointmentDialog({
 
     if (data) {
       setClients(data as Client[])
+    }
+  }
+
+  const loadWorkHours = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) return
+
+    const { data } = await supabase
+      .from('profiles')
+      .select('work_start_hour, work_end_hour')
+      .eq('id', user.id)
+      .single()
+
+    if (data) {
+      setWorkHours({
+        work_start_hour: data.work_start_hour || 9,
+        work_end_hour: data.work_end_hour || 17,
+      })
+    } else {
+      // Default values if profile not found
+      setWorkHours({
+        work_start_hour: 9,
+        work_end_hour: 17,
+      })
     }
   }
 
@@ -96,24 +148,40 @@ export default function AppointmentDialog({
       return
     }
 
-    // Combine date and time
+    // Combine date and time to create ISO string (UTC)
+    // This ensures the format matches exactly how it's stored in the database
     const [hours, minutes] = formData.time.split(':')
     const startTime = new Date(formData.date)
     startTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+    const startTimeISO = startTime.toISOString()
+
+    // MANDATORY CONFLICT DETECTION: Check if slot is already taken
+    // This prevents double bookings by checking for existing appointments
+    // at the exact same time with active statuses (pending, approved, completed)
+    // Cancelled and rejected appointments do NOT block the slot
+    const hasConflict = await checkAppointmentConflict(user.id, startTimeISO)
+
+    if (hasConflict) {
+      // STOP execution immediately - do not insert
+      toast.error('Hata: Bu saatte zaten onaylanmış/bekleyen başka bir randevu mevcut. Lütfen farklı bir saat seçin.')
+      setLoading(false)
+      return
+    }
 
     const { error } = await supabase.from('appointments').insert({
       dietitian_id: user.id,
       client_id: formData.client_id || null,
       guest_name: formData.guest_name || null,
       guest_phone: formData.guest_phone || null,
-      start_time: startTime.toISOString(),
+      start_time: startTimeISO,
       status: 'approved', // Manual appointments are auto-approved
     })
 
     if (error) {
-      alert('Randevu oluşturulurken hata: ' + error.message)
+      toast.error('Randevu oluşturulurken hata: ' + error.message)
       setLoading(false)
     } else {
+      toast.success('Randevu başarıyla oluşturuldu!')
       onSuccess()
       onClose()
       // Reset form
@@ -216,17 +284,36 @@ export default function AppointmentDialog({
             />
           </div>
 
-          {/* Time */}
+          {/* Time Slot Selection */}
           <div className="space-y-2">
             <Label htmlFor="time">Saat *</Label>
-            <Input
-              id="time"
-              type="time"
-              value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
-              className="text-base h-12"
-              required
-            />
+            {timeSlots.length === 0 ? (
+              <div className="text-sm text-gray-500 py-2">
+                Çalışma saatleri yükleniyor...
+              </div>
+            ) : (
+              <Select
+                value={formData.time}
+                onValueChange={(value) => setFormData({ ...formData, time: value })}
+              >
+                <SelectTrigger id="time" className="text-base h-12">
+                  <SelectValue placeholder="Saat seçin" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((slot) => (
+                    <SelectItem key={slot} value={slot}>
+                      {slot}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {workHours && (
+              <p className="text-xs text-gray-500 mt-1">
+                Çalışma saatleri: {String(workHours.work_start_hour).padStart(2, '0')}:00 - {String(workHours.work_end_hour).padStart(2, '0')}:00 
+                {' • '}Seans süresi: 30 dakika
+              </p>
+            )}
           </div>
 
           {/* Notes */}

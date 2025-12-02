@@ -2,22 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Calendar, DollarSign, Clock, Link as LinkIcon, Copy, Check, ExternalLink, Share2 } from 'lucide-react'
+import { Calendar, Clock, Link as LinkIcon, Copy, Check, ExternalLink, Share2, AlertCircle, User, FileText, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
-import { format, startOfMonth, endOfMonth } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
 import { toast } from 'sonner'
 
 export default function DashboardPage() {
-  const [stats, setStats] = useState({
-    totalClients: 0,
-    todayAppointments: 0,
-    revenue: 0,
-  })
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>(
     []
   )
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([])
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [userName, setUserName] = useState<string>('')
@@ -49,25 +45,30 @@ export default function DashboardPage() {
       setPublicSlug(profile.public_slug)
     }
 
-    // Get total clients
-    const { count: clientsCount } = await supabase
-      .from('clients')
-      .select('*', { count: 'exact', head: true })
-      .eq('dietitian_id', user.id)
-
-    // Get today's appointments
+    // Get today's confirmed appointments (with full details for the workflow widget)
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const todayEnd = new Date()
     todayEnd.setHours(23, 59, 59, 999)
 
-    const { count: todayCount } = await supabase
+    const { count: todayCount, data: todayData } = await supabase
       .from('appointments')
-      .select('*', { count: 'exact', head: true })
+      .select(
+        `
+        *,
+        clients:client_id (
+          id,
+          name,
+          phone
+        )
+      `,
+        { count: 'exact' }
+      )
       .eq('dietitian_id', user.id)
       .eq('status', 'approved')
       .gte('start_time', todayStart.toISOString())
       .lte('start_time', todayEnd.toISOString())
+      .order('start_time', { ascending: true })
 
     // Get pending appointments
     const { data: pending } = await supabase
@@ -84,31 +85,8 @@ export default function DashboardPage() {
       .eq('status', 'pending')
       .order('start_time', { ascending: true })
 
-    // Get monthly revenue from transactions
-    const currentMonthStart = startOfMonth(new Date())
-    const currentMonthEnd = endOfMonth(new Date())
-
-    const { data: transactions } = await supabase
-      .from('transactions')
-      .select('amount, type')
-      .eq('dietitian_id', user.id)
-      .gte('transaction_date', format(currentMonthStart, 'yyyy-MM-dd'))
-      .lte('transaction_date', format(currentMonthEnd, 'yyyy-MM-dd'))
-
-    const revenue =
-      transactions?.reduce((sum, t) => {
-        return (
-          sum + ((t.type as string) === 'income' ? Number(t.amount) : -Number(t.amount))
-        )
-      }, 0) || 0
-
-    setStats({
-      totalClients: clientsCount || 0,
-      todayAppointments: todayCount || 0,
-      revenue: revenue,
-    })
-
     setPendingAppointments((pending as Appointment[]) || [])
+    setTodayAppointments((todayData as Appointment[]) || [])
     setLoading(false)
   }
 
@@ -146,52 +124,7 @@ export default function DashboardPage() {
         <p className="text-gray-600 mt-1">İşte bugünkü özetiniz</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Toplam Danışan</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.totalClients}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <Users className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Bugünkü Randevular</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                {stats.todayAppointments}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Bu Ay Gelir</p>
-              <p className="text-3xl font-bold text-gray-900 mt-2">
-                ₺{stats.revenue.toLocaleString('tr-TR', { minimumFractionDigits: 2 })}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <DollarSign className="w-6 h-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Pending Appointments */}
+      {/* Pending Appointments - Priority: First actionable item */}
       {pendingAppointments.length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
@@ -270,6 +203,13 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Daily Workflow & To-Do List Widget */}
+      <DailyWorkflowWidget
+        pendingAppointments={pendingAppointments}
+        todayAppointments={todayAppointments}
+        loading={loading}
+      />
+
       {/* Personal Booking Link Hero Card */}
       <div className="bg-gradient-to-br from-teal-50 to-green-50 rounded-xl shadow-lg border-2 border-teal-200 p-6 md:p-8">
         <div className="flex items-center justify-between mb-4">
@@ -297,12 +237,12 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-4 bg-white rounded-lg border-2 border-teal-200 shadow-sm">
               <code className="flex-1 text-sm md:text-base text-gray-900 font-mono break-all">
-                diyetlik.com/book/{publicSlug}
+                diyetlik.com.tr/randevu/{publicSlug}
               </code>
               <div className="flex items-center gap-2">
-                <CopyButton text={`https://diyetlik.com/book/${publicSlug}`} />
+                <CopyButton text={`https://diyetlik.com.tr/randevu/${publicSlug}`} />
                 <a
-                  href={`https://diyetlik.com/book/${publicSlug}`}
+                  href={`https://diyetlik.com.tr/randevu/${publicSlug}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center space-x-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium text-sm"
@@ -311,7 +251,7 @@ export default function DashboardPage() {
                   <ExternalLink className="w-4 h-4" />
                   <span className="hidden sm:inline">Sayfaya Git</span>
                 </a>
-                <ShareButton url={`https://diyetlik.com/book/${publicSlug}`} />
+                <ShareButton url={`https://diyetlik.com.tr/randevu/${publicSlug}`} />
               </div>
             </div>
             <p className="text-sm text-gray-600">
@@ -408,6 +348,200 @@ function ShareButton({ url }: { url: string }) {
       <Share2 className="w-4 h-4" />
       <span className="hidden sm:inline">Paylaş</span>
     </button>
+  )
+}
+
+// Daily Workflow & To-Do List Widget Component
+function DailyWorkflowWidget({
+  pendingAppointments,
+  todayAppointments,
+  loading,
+}: {
+  pendingAppointments: Appointment[]
+  todayAppointments: Appointment[]
+  loading: boolean
+}) {
+  const tasks: Array<{
+    id: string
+    type: 'pending' | 'today' | 'diet_list'
+    title: string
+    description: string
+    icon: React.ReactNode
+    color: string
+    bgColor: string
+    action?: {
+      label: string
+      href: string
+    }
+    items?: Array<{
+      id: string
+      name: string
+      time?: string
+      href?: string
+    }>
+  }> = []
+
+  // Task A: Bekleyen Randevu Onayları 🚨
+  if (pendingAppointments.length > 0) {
+    tasks.push({
+      id: 'pending',
+      type: 'pending',
+      title: 'Bekleyen Randevu Onayları',
+      description: `${pendingAppointments.length} adet yeni randevu talebi onay bekliyor.`,
+      icon: <AlertCircle className="w-5 h-5" />,
+      color: 'text-red-600',
+      bgColor: 'bg-red-50',
+      action: {
+        label: 'Takvime Git',
+        href: '/calendar',
+      },
+    })
+  }
+
+  // Task B: Bugünkü Randevular 👥
+  if (todayAppointments.length > 0) {
+    tasks.push({
+      id: 'today',
+      type: 'today',
+      title: "Bugünkü Randevular",
+      description: `${todayAppointments.length} adet randevunuz var.`,
+      icon: <User className="w-5 h-5" />,
+      color: 'text-green-600',
+      bgColor: 'bg-green-50',
+      action: {
+        label: 'Tümünü Gör',
+        href: '/calendar',
+      },
+      items: todayAppointments.map((apt) => ({
+        id: apt.id,
+        name: apt.clients?.name || apt.guest_name || 'Misafir',
+        time: format(parseISO(apt.start_time), 'HH:mm', { locale: tr }),
+        href: apt.client_id ? `/clients/${apt.client_id}` : undefined,
+      })),
+    })
+  }
+
+  // Task C: Diyet Listesi Gönderimi 📝
+  tasks.push({
+    id: 'diet_list',
+    type: 'diet_list',
+    title: 'Diyet Listesi Gönderimi',
+    description: 'Diyet listesi hazırlamayı unuttuğunuz danışanları kontrol edin.',
+    icon: <FileText className="w-5 h-5" />,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    action: {
+      label: 'Danışanlara Git',
+      href: '/clients',
+    },
+  })
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="animate-pulse">
+          <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="space-y-3">
+            <div className="h-4 bg-gray-200 rounded"></div>
+            <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-teal-50 to-green-50">
+        <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+          <Calendar className="w-6 h-6 text-teal-600" />
+          <span>Bugün Yapılacaklar Listesi</span>
+        </h2>
+      </div>
+
+      <div className="p-6">
+        {tasks.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <p className="text-lg font-medium text-gray-900 mb-2">
+              Bugün yapılacak acil bir işiniz yok. Rahatlayın! 🏖️
+            </p>
+            <p className="text-sm text-gray-500">
+              Tüm randevularınız planlandı ve işleriniz güncel.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {tasks.map((task) => (
+              <div
+                key={task.id}
+                className={`border-2 rounded-lg p-4 ${task.bgColor} border-opacity-50 hover:shadow-md transition-shadow`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start space-x-3 flex-1">
+                    <div className={`${task.color} mt-0.5`}>{task.icon}</div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className={`font-semibold text-gray-900 mb-1 ${task.color}`}>
+                        {task.title}
+                      </h3>
+                      <p className="text-sm text-gray-700 mb-2">{task.description}</p>
+
+                      {/* Show today's appointments list if available */}
+                      {task.items && task.items.length > 0 && (
+                        <div className="mt-3 space-y-2">
+                          {task.items.map((item) => (
+                            <div
+                              key={item.id}
+                              className="flex items-center justify-between bg-white rounded-lg p-2 border border-gray-200"
+                            >
+                              <div className="flex items-center space-x-2 flex-1 min-w-0">
+                                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                                <span className="text-sm font-medium text-gray-900 truncate">
+                                  {item.name}
+                                </span>
+                                {item.time && (
+                                  <span className="text-xs text-gray-500 flex-shrink-0">
+                                    {item.time}
+                                  </span>
+                                )}
+                              </div>
+                              {item.href && (
+                                <Link
+                                  href={item.href}
+                                  className="ml-2 p-1.5 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                                  title="Danışan Profiline Git"
+                                >
+                                  <ArrowRight className="w-4 h-4 text-gray-600" />
+                                </Link>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {task.action && (
+                    <Link
+                      href={task.action.href}
+                      className={`inline-flex items-center space-x-2 px-4 py-2 text-white rounded-lg hover:opacity-90 transition-opacity font-medium text-sm whitespace-nowrap flex-shrink-0`}
+                      style={{
+                        backgroundColor: task.type === 'pending' ? '#dc2626' : task.type === 'today' ? '#16a34a' : '#2563eb',
+                      }}
+                    >
+                      <span>{task.action.label}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

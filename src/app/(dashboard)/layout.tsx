@@ -5,9 +5,10 @@ import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
-import { Menu, LayoutDashboard, Users, Calendar, Wallet, Settings } from 'lucide-react'
+import { Menu, LayoutDashboard, Users, Calendar, Wallet, Settings, HelpCircle } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import TrialBanner from '@/components/TrialBanner'
+import QuickSearch from '@/components/QuickSearch'
 
 export default function DashboardLayout({
   children,
@@ -74,6 +75,13 @@ export default function DashboardLayout({
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col ml-0 lg:ml-64 pb-16 lg:pb-0 overflow-y-auto">
+        {/* Desktop Header with Search */}
+        <header className="hidden lg:flex bg-white border-b border-gray-200 px-6 py-4 items-center justify-between sticky top-0 z-30">
+          <div className="flex-1 max-w-md">
+            <QuickSearch />
+          </div>
+        </header>
+
         {/* Mobile Header */}
         <header className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <button
@@ -94,6 +102,11 @@ export default function DashboardLayout({
           </Link>
           <div className="w-10" /> {/* Spacer for centering */}
         </header>
+
+        {/* Mobile Search Bar */}
+        <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
+          <QuickSearch />
+        </div>
 
         {/* Trial Banner */}
         {profile && (
@@ -165,6 +178,17 @@ export default function DashboardLayout({
             >
               <Settings className="w-5 h-5" />
               <span className="text-xs">Ayarlar</span>
+            </Link>
+            <Link
+              href="/support"
+              className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors min-w-[60px] ${
+                pathname === '/support'
+                  ? 'text-green-600'
+                  : 'text-gray-600'
+              }`}
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span className="text-xs">Destek</span>
             </Link>
           </div>
         </nav>

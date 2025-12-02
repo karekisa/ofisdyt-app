@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { Trash2 } from 'lucide-react'
+import { appointmentStatusMap } from '@/lib/constants'
+import { checkAppointmentConflict } from '@/lib/utils'
 
 type EditAppointmentDialogProps = {
   isOpen: boolean
@@ -94,7 +96,24 @@ export default function EditAppointmentDialog({
       return
     }
 
-    const start_time = new Date(`${formData.date}T${formData.time}:00`).toISOString()
+    const [hours, minutes] = formData.time.split(':').map(Number)
+    const startTime = new Date(formData.date)
+    startTime.setHours(hours, minutes, 0, 0)
+    const startTimeISO = startTime.toISOString()
+
+    // Server-side conflict detection: Check if the new time conflicts with another appointment
+    // Exclude the current appointment being edited from the conflict check
+    const hasConflict = await checkAppointmentConflict(
+      user.id,
+      startTimeISO,
+      appointment.id // Exclude current appointment from conflict check
+    )
+
+    if (hasConflict) {
+      toast.error('Bu saatte zaten başka bir randevu mevcut!')
+      setSubmitting(false)
+      return
+    }
 
     const { error } = await supabase
       .from('appointments')
@@ -102,7 +121,7 @@ export default function EditAppointmentDialog({
         client_id: formData.client_id || null,
         guest_name: formData.client_id ? null : formData.guest_name,
         guest_phone: formData.client_id ? null : formData.guest_phone,
-        start_time,
+        start_time: startTimeISO,
         status: formData.status,
       })
       .eq('id', appointment.id)
@@ -241,12 +260,13 @@ export default function EditAppointmentDialog({
               <SelectTrigger className="w-full text-base">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending">Beklemede</SelectItem>
-                <SelectItem value="approved">Onaylandı</SelectItem>
-                <SelectItem value="rejected">Reddedildi</SelectItem>
-                <SelectItem value="completed">Tamamlandı</SelectItem>
-              </SelectContent>
+                  <SelectContent>
+                    <SelectItem value="pending">{appointmentStatusMap.pending}</SelectItem>
+                    <SelectItem value="approved">{appointmentStatusMap.approved}</SelectItem>
+                    <SelectItem value="rejected">{appointmentStatusMap.rejected}</SelectItem>
+                    <SelectItem value="completed">{appointmentStatusMap.completed}</SelectItem>
+                    <SelectItem value="cancelled">{appointmentStatusMap.cancelled}</SelectItem>
+                  </SelectContent>
             </Select>
           </div>
 

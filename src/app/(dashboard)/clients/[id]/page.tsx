@@ -3,11 +3,13 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, Edit } from 'lucide-react'
+import { ArrowLeft, Edit, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import ClientTabs from './ClientTabs'
 import EditClientDialog from './EditClientDialog'
 import { Client } from '@/lib/types'
+import { formatPhoneForWhatsapp } from '@/lib/utils'
+import { toast } from 'sonner'
 
 export default function ClientDetailPage() {
   const params = useParams()
@@ -110,6 +112,22 @@ export default function ClientDetailPage() {
     setIsEditDialogOpen(false)
   }
 
+  const handleSendWhatsApp = () => {
+    if (!client?.phone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const normalizedPhone = formatPhoneForWhatsapp(client.phone)
+    if (!normalizedPhone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const whatsappUrl = `https://wa.me/${normalizedPhone}`
+    window.open(whatsappUrl, '_blank')
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -147,13 +165,24 @@ export default function ClientDetailPage() {
           <ArrowLeft className="w-5 h-5" />
           <span>Danışanlara Dön</span>
         </Link>
-        <button
-          onClick={() => setIsEditDialogOpen(true)}
-          className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-        >
-          <Edit className="w-4 h-4" />
-          <span>Düzenle</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {client.phone && (
+            <button
+              onClick={handleSendWhatsApp}
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-[#25D366] text-white rounded-lg hover:bg-[#20BA5A] transition-colors font-medium"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>Mesaj At</span>
+            </button>
+          )}
+          <button
+            onClick={() => setIsEditDialogOpen(true)}
+            className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+          >
+            <Edit className="w-4 h-4" />
+            <span>Düzenle</span>
+          </button>
+        </div>
       </div>
 
       {/* Client Info Header */}

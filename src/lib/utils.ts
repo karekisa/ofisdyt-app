@@ -93,3 +93,60 @@ export function formatPhoneForWhatsapp(phone: string | null | undefined): string
   // Invalid format
   return null
 }
+
+/**
+ * Check if an appointment slot is already booked (server-side conflict detection)
+ * 
+ * This function performs a database query to check if an appointment already exists
+ * at the specified time for the given dietitian. Only appointments with statuses
+ * that block the slot (pending, approved, completed) are considered conflicts.
+ * Cancelled and rejected appointments do NOT block the slot.
+ * 
+ * @param dietitianId - The dietitian's user ID
+ * @param startTime - The appointment start time as ISO string (UTC)
+ * @param excludeAppointmentId - Optional: Exclude this appointment ID from conflict check (useful when editing)
+ * @returns Promise<boolean> - true if conflict exists, false if slot is available
+ */
+export async function checkAppointmentConflict(
+  dietitianId: string,
+  startTime: string,
+  excludeAppointmentId?: string
+): Promise<boolean> {
+  try {
+    // Dynamic import to avoid SSR issues
+    const { supabase } = await import('@/lib/supabase')
+    
+    // Build query for existing appointments at this exact time
+    // Only check appointments with statuses that block the slot:
+    // - pending: Waiting for approval (blocks slot)
+    // - approved/confirmed: Confirmed appointment (blocks slot)
+    // - completed: Completed appointment (blocks slot)
+    // Exclude: cancelled, rejected (these do NOT block the slot)
+    let query = supabase
+      .from('appointments')
+      .select('id')
+      .eq('dietitian_id', dietitianId)
+      .eq('start_time', startTime)
+      .in('status', ['pending', 'approved', 'confirmed', 'completed'])
+
+    // If editing an appointment, exclude it from conflict check
+    if (excludeAppointmentId) {
+      query = query.neq('id', excludeAppointmentId)
+    }
+
+    const { data, error } = await query.limit(1)
+
+    if (error) {
+      console.error('Error checking appointment conflict:', error)
+      // On error, assume conflict exists to be safe (fail-safe approach)
+      return true
+    }
+
+    // If any appointment found, conflict exists
+    return (data?.length ?? 0) > 0
+  } catch (err) {
+    console.error('Exception in checkAppointmentConflict:', err)
+    // On exception, assume conflict exists to be safe
+    return true
+  }
+}

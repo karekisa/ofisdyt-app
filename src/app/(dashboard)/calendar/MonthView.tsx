@@ -14,6 +14,7 @@ import {
 } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
+import { appointmentStatusMap } from '@/lib/constants'
 import { Calendar as CalendarIcon } from 'lucide-react'
 
 type MonthViewProps = {
@@ -55,9 +56,15 @@ export default function MonthView({
         return 'bg-red-500'
       case 'completed':
         return 'bg-blue-500'
+      case 'cancelled':
+        return 'bg-red-500'
       default:
         return 'bg-gray-500'
     }
+  }
+
+  const getStatusLabel = (status: string) => {
+    return appointmentStatusMap[status] || status
   }
 
   const weekDays = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz']

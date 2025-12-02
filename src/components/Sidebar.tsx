@@ -11,6 +11,7 @@ import {
   Settings,
   LogOut,
   X,
+  HelpCircle,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import SubscriptionStatusWidget from './SubscriptionStatusWidget'
@@ -149,6 +150,20 @@ export default function Sidebar({
                 trial_ends_at={profile.trial_ends_at}
               />
             )}
+
+            {/* Support Link */}
+            <Link
+              href="/support"
+              onClick={() => setMobileOpen?.(false)}
+              className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors font-medium ${
+                pathname === '/support'
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              <HelpCircle className="w-5 h-5" />
+              <span>Destek & Geri Bildirim</span>
+            </Link>
 
             {/* Logout Button */}
             <button

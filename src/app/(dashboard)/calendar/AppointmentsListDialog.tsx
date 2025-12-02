@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { X, Calendar, Clock, User, Phone, Edit } from 'lucide-react'
-import { format } from 'date-fns'
+import { X, Calendar, Clock, User, Phone, Edit, MessageCircle } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
 import { Button } from '@/components/ui/button'
+import { formatPhoneForWhatsapp } from '@/lib/utils'
+import { appointmentStatusMap } from '@/lib/constants'
+import { toast } from 'sonner'
 
 type AppointmentsListDialogProps = {
   isOpen: boolean
@@ -76,25 +79,29 @@ export default function AppointmentsListDialog({
   const getStatusBadge = (status: string) => {
     const statusConfig = {
       approved: {
-        label: 'Onaylandı',
+        label: appointmentStatusMap.approved || 'Onaylandı',
         className: 'bg-green-100 text-green-700 border-green-200',
       },
       pending: {
-        label: 'Beklemede',
+        label: appointmentStatusMap.pending || 'Beklemede',
         className: 'bg-yellow-100 text-yellow-700 border-yellow-200',
       },
       rejected: {
-        label: 'Reddedildi',
+        label: appointmentStatusMap.rejected || 'Reddedildi',
         className: 'bg-red-100 text-red-700 border-red-200',
       },
       completed: {
-        label: 'Tamamlandı',
+        label: appointmentStatusMap.completed || 'Tamamlandı',
         className: 'bg-blue-100 text-blue-700 border-blue-200',
+      },
+      cancelled: {
+        label: appointmentStatusMap.cancelled || 'İptal Edildi',
+        className: 'bg-red-100 text-red-700 border-red-200',
       },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig] || {
-      label: status,
+      label: appointmentStatusMap[status] || status,
       className: 'bg-gray-100 text-gray-700 border-gray-200',
     }
 
@@ -105,6 +112,29 @@ export default function AppointmentsListDialog({
         {config.label}
       </span>
     )
+  }
+
+  const handleSendWhatsApp = (appointment: Appointment) => {
+    const phone = appointment.clients?.phone || appointment.guest_phone
+    const name = appointment.clients?.name || appointment.guest_name || 'Danışan'
+
+    if (!phone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const normalizedPhone = formatPhoneForWhatsapp(phone)
+    if (!normalizedPhone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    const dateStr = format(parseISO(appointment.start_time), 'd MMMM yyyy', { locale: tr })
+    const timeStr = format(parseISO(appointment.start_time), 'HH:mm', { locale: tr })
+    const message = `Merhaba ${name}, ${dateStr} ${timeStr} randevunuzu hatırlatmak isterim.`
+    const whatsappUrl = `https://wa.me/${normalizedPhone}?text=${encodeURIComponent(message)}`
+
+    window.open(whatsappUrl, '_blank')
   }
 
   if (!isOpen) return null
@@ -206,8 +236,17 @@ export default function AppointmentsListDialog({
                     </div>
 
                     {/* Right: Actions */}
-                    {onEdit && (
-                      <div className="flex items-start">
+                    <div className="flex items-start gap-2">
+                      {(appointment.clients?.phone || appointment.guest_phone) && (
+                        <button
+                          onClick={() => handleSendWhatsApp(appointment)}
+                          className="inline-flex items-center justify-center px-3 py-2 bg-[#25D366] text-white rounded-lg hover:bg-[#20BA5A] transition-colors text-sm font-medium min-h-[40px]"
+                          title="WhatsApp ile hatırlat"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                        </button>
+                      )}
+                      {onEdit && (
                         <Button
                           variant="outline"
                           size="sm"
@@ -220,8 +259,8 @@ export default function AppointmentsListDialog({
                           <Edit className="w-4 h-4 mr-2" />
                           Düzenle
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

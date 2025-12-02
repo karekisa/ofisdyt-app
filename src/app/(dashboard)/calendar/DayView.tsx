@@ -5,12 +5,13 @@ import { format, parseISO, isSameDay } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { generateTimeSlots } from './utils'
 import { Appointment } from '@/lib/types'
+import { appointmentStatusMap } from '@/lib/constants'
 import { Clock } from 'lucide-react'
 
 type DayViewProps = {
   date: Date
   appointments: Appointment[]
-  profile: { work_start_hour: number; work_end_hour: number; session_duration: number } | null
+  profile: { work_start_hour: number; work_end_hour: number } | null
   onAppointmentClick: (appointment: Appointment) => void
   onDateClick: (date: Date) => void
 }
@@ -24,11 +25,12 @@ export default function DayView({
 }: DayViewProps) {
   const workStartHour = profile?.work_start_hour || 9
   const workEndHour = profile?.work_end_hour || 17
-  const sessionDuration = profile?.session_duration || 60
+  // Fixed 30-minute session duration globally
+  const sessionDuration = 30
 
   const timeSlots = useMemo(() => {
     return generateTimeSlots(workStartHour, workEndHour, sessionDuration)
-  }, [workStartHour, workEndHour, sessionDuration])
+  }, [workStartHour, workEndHour])
 
   const dayAppointments = useMemo(() => {
     return appointments.filter((apt) => {
@@ -54,9 +56,15 @@ export default function DayView({
         return 'bg-red-100 border-red-300 text-red-900'
       case 'completed':
         return 'bg-blue-100 border-blue-300 text-blue-900'
+      case 'cancelled':
+        return 'bg-red-100 border-red-300 text-red-900'
       default:
         return 'bg-gray-100 border-gray-300 text-gray-900'
     }
+  }
+
+  const getStatusLabel = (status: string) => {
+    return appointmentStatusMap[status] || status
   }
 
   return (
