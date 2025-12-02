@@ -42,39 +42,46 @@ export default function BookingClient({ slug }: BookingClientProps) {
 
   const loadProfile = async () => {
     try {
-      // CRITICAL: Ensure slug is lowercase for case-insensitive matching
-      const lowerCaseSlug = slug.toLowerCase()
+      // CRITICAL: Ensure slug is lowercase and trimmed for case-insensitive matching
+      const normalizedSlug = slug.toLowerCase().trim()
       
-      // Try case-insensitive match first using ilike
-      let { data, error } = await supabase
+      // Client-side debugging
+      console.log('[BookingClient] Client-side fetch - Searching for slug:', normalizedSlug)
+      
+      // Robust query: Select explicit fields only, use ILIKE for case-insensitive matching
+      // DO NOT select '*' or join auth.users - this causes permission errors for public users
+      const { data, error } = await supabase
         .from('profiles')
-        .select('*')
-        .ilike('public_slug', lowerCaseSlug) // Use ilike for case-insensitive matching
+        .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration, phone, website, avatar_url')
+        .ilike('public_slug', normalizedSlug) // Use ILIKE for case-insensitive match
         .maybeSingle()
 
-      // Fallback: Try exact match with original slug case
-      if (!data && !error) {
-        const fallbackResult = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('public_slug', slug)
-          .maybeSingle()
-        
-        if (fallbackResult.data) {
-          data = fallbackResult.data
-          error = fallbackResult.error
-        }
+      // Client-side debugging
+      console.log('[BookingClient] Client-side fetch - Found profile:', data ? 'Yes' : 'No')
+      if (error) {
+        console.error('[BookingClient] Client-side fetch - Supabase error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+        })
       }
 
-      if (error || !data) {
-        console.error('Error loading profile:', error)
+      if (error) {
+        console.error('[BookingClient] Error loading profile:', error)
+        setLoading(false)
+        return
+      }
+
+      if (!data) {
+        console.warn('[BookingClient] Profile not found for slug:', normalizedSlug)
         setLoading(false)
         return
       }
 
       setProfile(data as unknown as Profile)
     } catch (error) {
-      console.error('Error loading profile:', error)
+      console.error('[BookingClient] Exception loading profile:', error)
     } finally {
       setLoading(false)
     }

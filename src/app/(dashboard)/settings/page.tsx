@@ -75,10 +75,22 @@ export default function SettingsPage() {
     if (!profile) return
 
     try {
+      // CRITICAL: Sanitize slug - convert to lowercase and trim whitespace
+      // This ensures consistent slug format and prevents case-sensitivity issues
+      const sanitizedSlug = profile.public_slug 
+        ? profile.public_slug.toLowerCase().trim().replace(/\s+/g, '-') // Replace spaces with hyphens
+        : null
+
+      // Validate slug format (alphanumeric, hyphens, underscores only)
+      if (sanitizedSlug && !/^[a-z0-9_-]+$/.test(sanitizedSlug)) {
+        toast.error('Slug sadece küçük harf, rakam, tire (-) ve alt çizgi (_) içerebilir')
+        return
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          public_slug: profile.public_slug,
+          public_slug: sanitizedSlug,
           work_start_hour: profile.work_start_hour,
           work_end_hour: profile.work_end_hour,
           session_duration: 30, // Fixed to 30 minutes globally
@@ -86,6 +98,10 @@ export default function SettingsPage() {
         .eq('id', profile.id)
 
       if (error) throw error
+      
+      // Update local state with sanitized slug
+      setProfile({ ...profile, public_slug: sanitizedSlug })
+      
       toast.success('Randevu ayarları kaydedildi')
     } catch (error) {
       toast.error('Ayarlar kaydedilemedi')
@@ -173,15 +189,25 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={updateBookingConfig} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Randevu Linki (Slug)</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-500 text-sm">diyetlik.com.tr/randevu/</span>
-                  <Input 
-                    value={profile.public_slug || ''} 
-                    onChange={(e) => setProfile({ ...profile, public_slug: e.target.value })}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label>Randevu Linki (Slug)</Label>
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-500 text-sm">diyetlik.com.tr/randevu/</span>
+                      <Input 
+                        value={profile.public_slug || ''} 
+                        onChange={(e) => {
+                          // Auto-sanitize on input: lowercase and remove spaces
+                          const value = e.target.value.toLowerCase().trim().replace(/\s+/g, '-')
+                          setProfile({ ...profile, public_slug: value })
+                        }}
+                        placeholder="ornek-slug"
+                        pattern="[a-z0-9_-]+"
+                        title="Sadece küçük harf, rakam, tire (-) ve alt çizgi (_) kullanın"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Örnek: dr-furkan, diyetisyen-ayse (küçük harf, tire veya alt çizgi kullanın)
+                    </p>
                 <Button
                   type="button"
                   variant="outline"
