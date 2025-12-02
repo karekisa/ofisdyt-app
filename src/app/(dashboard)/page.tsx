@@ -6,15 +6,7 @@ import { Users, Calendar, DollarSign, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
-
-type Appointment = {
-  id: string
-  guest_name: string | null
-  guest_phone: string | null
-  start_time: string
-  client_id: string | null
-  clients?: { name: string } | null
-}
+import { Appointment } from '@/lib/types'
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({

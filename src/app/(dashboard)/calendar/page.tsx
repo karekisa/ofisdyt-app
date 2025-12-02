@@ -12,16 +12,7 @@ import MonthView from './MonthView'
 import AppointmentDialog from './AppointmentDialog'
 import AppointmentsListDialog from './AppointmentsListDialog'
 import EditAppointmentDialog from './EditAppointmentDialog'
-
-type Appointment = {
-  id: string
-  client_id: string | null
-  guest_name: string | null
-  guest_phone: string | null
-  start_time: string
-  status: 'pending' | 'approved' | 'rejected' | 'completed'
-  clients?: { name: string } | null
-}
+import { Appointment } from '@/lib/types'
 
 type ViewMode = 'week' | 'day' | 'month'
 

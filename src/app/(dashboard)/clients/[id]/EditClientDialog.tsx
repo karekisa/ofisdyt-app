@@ -3,16 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { X } from 'lucide-react'
-
-type Client = {
-  id: string
-  name: string
-  phone: string | null
-  age: number | null
-  height: number | null
-  gender: string | null
-  notes: string | null
-}
+import { Client } from '@/lib/types'
 
 type EditClientDialogProps = {
   client: Client

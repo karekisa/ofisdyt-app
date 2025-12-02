@@ -9,48 +9,18 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-// Database types
-export type Profile = {
-  id: string
-  full_name: string | null
-  clinic_name: string | null
-  public_slug: string | null
-  work_start_hour: number | null
-  work_end_hour: number | null
-  session_duration: number | null
-  profession: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
-  created_at: string
-}
-
-export type Client = {
-  id: string
-  dietitian_id: string
-  name: string
-  phone: string | null
-  age: number | null
-  height: number | null
-  gender: string | null
-  notes: string | null
-  created_at: string
-}
-
-export type Appointment = {
-  id: string
-  dietitian_id: string
-  client_id: string | null
-  guest_name: string | null
-  guest_phone: string | null
-  start_time: string
-  status: 'pending' | 'approved' | 'rejected' | 'completed'
-  created_at: string
-}
-
-export type Measurement = {
-  id: string
-  client_id: string
-  date: string
-  weight: number | null
-  body_fat_ratio: number | null
-  created_at: string
-}
+// Re-export types from types.ts for backward compatibility
+// All types are now centralized in @/lib/types.ts
+export type {
+  Profile,
+  Client,
+  Appointment,
+  Measurement,
+  Transaction,
+  TransactionType,
+  AppointmentStatus,
+  PaymentMethod,
+  Profession,
+  SubscriptionStatus,
+} from './types'
 

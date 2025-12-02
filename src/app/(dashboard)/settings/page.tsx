@@ -1,332 +1,235 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-
-type Profile = {
-  id: string
-  full_name: string | null
-  clinic_name: string | null
-  phone: string | null
-  bio: string | null
-  website: string | null
-  public_slug: string | null
-  work_start_hour: number | null
-  work_end_hour: number | null
-  session_duration: number | null
-  profession: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
-}
-
-const professionLabels: Record<string, string> = {
-  dietitian: 'Diyetisyen',
-  psychologist: 'Psikolog / Terapist',
-  pt: 'Spor Eğitmeni / PT',
-  consultant: 'Diğer / Danışman',
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
+import { Profile } from '@/lib/types'
 
 export default function SettingsPage() {
-  const router = useRouter()
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [profile, setProfile] = useState<Profile | null>(null)
-  const [formData, setFormData] = useState({
-    full_name: '',
-    clinic_name: '',
-    phone: '',
-    bio: '',
-    website: '',
-    public_slug: '',
-    work_start_hour: 9,
-    work_end_hour: 17,
-    session_duration: 60,
-  })
+  const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
-    loadProfile()
+    fetchProfile()
   }, [])
 
-  const loadProfile = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
 
-    if (!user) {
-      router.push('/login')
-      return
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) throw error
+      
+      if (data) {
+        // BURASI HATAYI ÇÖZEN KISIM: Veriyi zorla kabul ettiriyoruz
+        setProfile(data as any)
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error)
+    } finally {
+      setLoading(false)
     }
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single()
-
-    if (error) {
-      alert('Profil yüklenirken hata: ' + error.message)
-      return
-    }
-
-    if (data) {
-      setProfile(data as Profile)
-      setFormData({
-        full_name: data.full_name || '',
-        clinic_name: data.clinic_name || '',
-        phone: data.phone || '',
-        bio: data.bio || '',
-        website: data.website || '',
-        public_slug: data.public_slug || '',
-        work_start_hour: data.work_start_hour || 9,
-        work_end_hour: data.work_end_hour || 17,
-        session_duration: data.session_duration || 60,
-      })
-    }
-
-    setLoading(false)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const updateProfile = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSaving(true)
+    if (!profile) return
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: profile.full_name,
+          clinic_name: profile.clinic_name,
+          phone: profile.phone,
+          bio: profile.bio,
+          website: profile.website,
+        })
+        .eq('id', profile.id)
 
-    if (!user) {
-      router.push('/login')
-      return
+      if (error) throw error
+      toast.success('Profil bilgileri güncellendi')
+    } catch (error) {
+      toast.error('Güncelleme başarısız oldu')
+      console.error(error)
     }
-
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: formData.full_name || null,
-        clinic_name: formData.clinic_name || null,
-        phone: formData.phone || null,
-        bio: formData.bio || null,
-        website: formData.website || null,
-        public_slug: formData.public_slug || null,
-        work_start_hour: formData.work_start_hour,
-        work_end_hour: formData.work_end_hour,
-        session_duration: formData.session_duration,
-      })
-      .eq('id', user.id)
-
-    if (error) {
-      alert('Güncellenirken hata: ' + error.message)
-    } else {
-      alert('Profil başarıyla güncellendi!')
-      loadProfile()
-    }
-
-    setSaving(false)
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Yükleniyor...</p>
-        </div>
-      </div>
-    )
+  const updateBookingConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!profile) return
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          public_slug: profile.public_slug,
+          work_start_hour: profile.work_start_hour,
+          work_end_hour: profile.work_end_hour,
+          session_duration: profile.session_duration,
+        })
+        .eq('id', profile.id)
+
+      if (error) throw error
+      toast.success('Randevu ayarları kaydedildi')
+    } catch (error) {
+      toast.error('Ayarlar kaydedilemedi')
+      console.error(error)
+    }
   }
+
+  if (loading) return <div className="p-8">Yükleniyor...</div>
+  if (!profile) return <div className="p-8">Profil bulunamadı.</div>
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Ayarlar</h1>
-        <p className="text-gray-600 mt-1">Profil bilgilerinizi yönetin</p>
+    <div className="space-y-6 pb-10">
+      <div className="flex justify-between items-center">
+        <h1 className="text-3xl font-bold tracking-tight text-gray-900">Ayarlar</h1>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6"
-      >
-        {/* Profession (Read-only) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Meslek
-          </label>
-          <input
-            type="text"
-            value={
-              profile?.profession
-                ? professionLabels[profile.profession] || profile.profession
-                : 'Belirtilmemiş'
-            }
-            disabled
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Meslek bilgisi kayıt sırasında belirlenir ve değiştirilemez.
-          </p>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* KART 1: PROFIL BILGILERI */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Profil Bilgileri</CardTitle>
+            <CardDescription>Danışanlarınızın göreceği genel bilgiler.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={updateProfile} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Ad Soyad</Label>
+                <Input 
+                  value={profile.full_name || ''} 
+                  onChange={(e) => setProfile({ ...profile, full_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Klinik Adı</Label>
+                <Input 
+                  value={profile.clinic_name || ''} 
+                  onChange={(e) => setProfile({ ...profile, clinic_name: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Telefon (İletişim)</Label>
+                <Input 
+                  placeholder="0555 555 55 55"
+                  value={profile.phone || ''} 
+                  onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Web Sitesi / Instagram</Label>
+                <Input 
+                  placeholder="https://..."
+                  value={profile.website || ''} 
+                  onChange={(e) => setProfile({ ...profile, website: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Hakkımda (Bio)</Label>
+                <Textarea 
+                  className="min-h-[100px]"
+                  placeholder="Kendinizden kısaca bahsedin..."
+                  value={profile.bio || ''} 
+                  onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+                />
+              </div>
+              <Button type="submit" className="w-full bg-teal-600 hover:bg-teal-700">Profili Güncelle</Button>
+            </form>
+          </CardContent>
+        </Card>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Ad Soyad
-          </label>
-          <input
-            type="text"
-            value={formData.full_name}
-            onChange={(e) =>
-              setFormData({ ...formData, full_name: e.target.value })
-            }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="Adınız ve soyadınız"
-          />
-        </div>
+        {/* KART 2: RANDEVU AYARLARI */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Randevu Ayarları</CardTitle>
+            <CardDescription>Randevu sayfasının nasıl çalışacağını belirleyin.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={updateBookingConfig} className="space-y-4">
+              <div className="space-y-2">
+                <Label>Randevu Linki (Slug)</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-sm">ceprandevu.com/book/</span>
+                  <Input 
+                    value={profile.public_slug || ''} 
+                    onChange={(e) => setProfile({ ...profile, public_slug: e.target.value })}
+                  />
+                </div>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Klinik / Kurum Adı
-          </label>
-          <input
-            type="text"
-            value={formData.clinic_name}
-            onChange={(e) =>
-              setFormData({ ...formData, clinic_name: e.target.value })
-            }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="Klinik veya kurum adı"
-          />
-        </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Mesai Başlangıç</Label>
+                  <Select 
+                    value={profile.work_start_hour?.toString() || '9'} 
+                    onValueChange={(val) => setProfile({ ...profile, work_start_hour: parseInt(val) || 9 })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }, (_, i) => i + 7).map((hour) => (
+                        <SelectItem key={hour} value={hour.toString()}>
+                          {`${hour.toString().padStart(2, '0')}:00`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Telefon
-          </label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) =>
-              setFormData({ ...formData, phone: e.target.value })
-            }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="+90 555 123 4567"
-          />
-        </div>
+                <div className="space-y-2">
+                  <Label>Mesai Bitiş</Label>
+                  <Select 
+                    value={profile.work_end_hour?.toString() || '18'} 
+                    onValueChange={(val) => setProfile({ ...profile, work_end_hour: parseInt(val) || 18 })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 13 }, (_, i) => i + 12).map((hour) => (
+                        <SelectItem key={hour} value={hour.toString()}>
+                          {`${hour.toString().padStart(2, '0')}:00`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Web Sitesi
-          </label>
-          <input
-            type="url"
-            value={formData.website}
-            onChange={(e) =>
-              setFormData({ ...formData, website: e.target.value })
-            }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="https://example.com"
-          />
-        </div>
+              <div className="space-y-2">
+                <Label>Seans Süresi (Dakika)</Label>
+                <Select 
+                    value={String(profile.session_duration || '45')} 
+                    onValueChange={(val) => setProfile({ ...profile, session_duration: parseInt(val) })}
+                  >
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 Dakika</SelectItem>
+                    <SelectItem value="30">30 Dakika</SelectItem>
+                    <SelectItem value="45">45 Dakika</SelectItem>
+                    <SelectItem value="60">60 Dakika (1 Saat)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Hakkımda
-          </label>
-          <textarea
-            value={formData.bio}
-            onChange={(e) =>
-              setFormData({ ...formData, bio: e.target.value })
-            }
-            rows={4}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="Kendiniz hakkında kısa bir açıklama"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Public Slug (Randevu Sayfası URL'i)
-          </label>
-          <input
-            type="text"
-            value={formData.public_slug}
-            onChange={(e) =>
-              setFormData({ ...formData, public_slug: e.target.value })
-            }
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            placeholder="ornek-klinik"
-          />
-          <p className="mt-1 text-xs text-gray-500">
-            Randevu sayfanız: /book/{formData.public_slug || 'slug'}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Çalışma Başlangıç Saati
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="23"
-              value={formData.work_start_hour}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  work_start_hour: parseInt(e.target.value) || 9,
-                })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Çalışma Bitiş Saati
-            </label>
-            <input
-              type="number"
-              min="0"
-              max="23"
-              value={formData.work_end_hour}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  work_end_hour: parseInt(e.target.value) || 17,
-                })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Seans Süresi (dakika)
-            </label>
-            <input
-              type="number"
-              min="15"
-              step="15"
-              value={formData.session_duration}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  session_duration: parseInt(e.target.value) || 60,
-                })
-              }
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        <div className="pt-4">
-          <button
-            type="submit"
-            disabled={saving}
-            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-          >
-            {saving ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-          </button>
-        </div>
-      </form>
+              <Button type="submit" className="w-full" variant="outline">Ayarları Kaydet</Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

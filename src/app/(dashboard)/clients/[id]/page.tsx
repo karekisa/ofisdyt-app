@@ -7,17 +7,7 @@ import { ArrowLeft, Edit } from 'lucide-react'
 import Link from 'next/link'
 import ClientTabs from './ClientTabs'
 import EditClientDialog from './EditClientDialog'
-
-type Client = {
-  id: string
-  name: string
-  phone: string | null
-  age: number | null
-  height: number | null
-  gender: string | null
-  notes: string | null
-  created_at: string
-}
+import { Client } from '@/lib/types'
 
 export default function ClientDetailPage() {
   const params = useParams()

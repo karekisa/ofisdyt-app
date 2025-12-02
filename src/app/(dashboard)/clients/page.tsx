@@ -7,17 +7,7 @@ import Link from 'next/link'
 import { Search, Plus, User, Phone, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { tr } from 'date-fns/locale'
-
-type Client = {
-  id: string
-  name: string
-  phone: string | null
-  age: number | null
-  height: number | null
-  gender: string | null
-  notes: string | null
-  created_at: string
-}
+import { Client } from '@/lib/types'
 
 export default function ClientsPage() {
   const router = useRouter()

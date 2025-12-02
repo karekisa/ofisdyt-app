@@ -6,24 +6,7 @@ import { Calendar, Clock, User, Phone, MessageSquare, CheckCircle, X } from 'luc
 import { format, addDays, isPast, setHours, setMinutes, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { generateTimeSlots } from '@/app/(dashboard)/calendar/utils'
-
-type Profile = {
-  id: string
-  full_name: string | null
-  clinic_name: string | null
-  phone: string | null
-  bio: string | null
-  avatar_url: string | null
-  work_start_hour: number
-  work_end_hour: number
-  session_duration: number
-}
-
-type Appointment = {
-  id: string
-  start_time: string
-  status: string
-}
+import { Profile, Appointment } from '@/lib/types'
 
 export default function BookingPage({ params }: { params: { slug: string } }) {
   const [loading, setLoading] = useState(true)
@@ -62,17 +45,7 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
       return
     }
 
-    setProfile({
-      id: data.id,
-      full_name: data.full_name,
-      clinic_name: data.clinic_name,
-      phone: data.phone,
-      bio: data.bio,
-      avatar_url: data.avatar_url,
-      work_start_hour: data.work_start_hour || 9,
-      work_end_hour: data.work_end_hour || 17,
-      session_duration: data.session_duration || 60,
-    })
+    setProfile(data as unknown as Profile)
 
     setLoading(false)
   }
@@ -96,7 +69,7 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
 
     if (data) {
       const booked = new Set<string>()
-      data.forEach((apt: Appointment) => {
+      ;(data as Appointment[]).forEach((apt) => {
         const time = format(parseISO(apt.start_time), 'HH:mm')
         booked.add(time)
       })
@@ -107,9 +80,9 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
   const timeSlots = useMemo(() => {
     if (!profile) return []
     return generateTimeSlots(
-      profile.work_start_hour,
-      profile.work_end_hour,
-      profile.session_duration
+      profile.work_start_hour || 9,
+      profile.work_end_hour || 17,
+      profile.session_duration || 60
     )
   }, [profile])
 

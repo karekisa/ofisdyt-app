@@ -17,19 +17,7 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import AddTransactionDialog from './AddTransactionDialog'
-
-type Transaction = {
-  id: string
-  type: 'income' | 'expense'
-  amount: number
-  category: string
-  description: string | null
-  payment_method: 'cash' | 'credit_card' | 'transfer'
-  transaction_date: string
-  client_id: string | null
-  created_at: string
-  clients?: { name: string } | null
-}
+import { Transaction } from '@/lib/types'
 
 export default function FinancePage() {
   const router = useRouter()
@@ -73,8 +61,12 @@ export default function FinancePage() {
     if (error) {
       console.error('Error loading transactions:', error)
       alert('İşlemler yüklenirken hata: ' + error.message)
+      setTransactions([])
+    } else if (data) {
+      // Cast to Transaction[] - type is properly defined in lib/types.ts
+      setTransactions(data as Transaction[])
     } else {
-      setTransactions((data as Transaction[]) || [])
+      setTransactions([])
     }
 
     setLoading(false)
@@ -83,11 +75,11 @@ export default function FinancePage() {
   // Calculate stats for current month
   const stats = useMemo(() => {
     const income = transactions
-      .filter((t) => t.type === 'income')
+      .filter((t) => (t.type as string) === 'income')
       .reduce((sum, t) => sum + Number(t.amount), 0)
 
     const expense = transactions
-      .filter((t) => t.type === 'expense')
+      .filter((t) => (t.type as string) === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0)
 
     const net = income - expense
@@ -115,11 +107,11 @@ export default function FinancePage() {
       )
 
       const dayIncome = dayTransactions
-        .filter((t) => t.type === 'income')
+        .filter((t) => (t.type as string) === 'income')
         .reduce((sum, t) => sum + Number(t.amount), 0)
 
       const dayExpense = dayTransactions
-        .filter((t) => t.type === 'expense')
+        .filter((t) => (t.type as string) === 'expense')
         .reduce((sum, t) => sum + Number(t.amount), 0)
 
       return {
@@ -323,15 +315,15 @@ export default function FinancePage() {
                   <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <div
                       className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        transaction.type === 'income'
+                        (transaction.type as string) === 'income'
                           ? 'bg-green-100'
                           : 'bg-red-100'
                       }`}
                     >
-                      {transaction.type === 'income' ? (
+                      {(transaction.type as string) === 'income' ? (
                         <ArrowUpRight
                           className={`w-5 h-5 ${
-                            transaction.type === 'income'
+                            (transaction.type as string) === 'income'
                               ? 'text-green-600'
                               : 'text-red-600'
                           }`}
@@ -339,7 +331,7 @@ export default function FinancePage() {
                       ) : (
                         <ArrowDownRight
                           className={`w-5 h-5 ${
-                            transaction.type === 'income'
+                            (transaction.type as string) === 'income'
                               ? 'text-green-600'
                               : 'text-red-600'
                           }`}
@@ -353,12 +345,12 @@ export default function FinancePage() {
                         </p>
                         <span
                           className={`px-2 py-1 text-xs rounded-full ${
-                            transaction.type === 'income'
+                            (transaction.type as string) === 'income'
                               ? 'bg-green-100 text-green-700'
                               : 'bg-red-100 text-red-700'
                           }`}
                         >
-                          {transaction.type === 'income' ? 'Gelir' : 'Gider'}
+                          {(transaction.type as string) === 'income' ? 'Gelir' : 'Gider'}
                         </span>
                       </div>
                       {transaction.description && (
@@ -386,12 +378,12 @@ export default function FinancePage() {
                   <div className="flex items-center space-x-4 ml-4">
                     <p
                       className={`text-lg font-bold ${
-                        transaction.type === 'income'
+                        (transaction.type as string) === 'income'
                           ? 'text-green-600'
                           : 'text-red-600'
                       }`}
                     >
-                      {transaction.type === 'income' ? '+' : '-'}₺
+                      {(transaction.type as string) === 'income' ? '+' : '-'}₺
                       {Number(transaction.amount).toLocaleString('tr-TR', {
                         minimumFractionDigits: 2,
                         maximumFractionDigits: 2,

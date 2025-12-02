@@ -4,17 +4,7 @@ import { useState } from 'react'
 import MeasurementsTab from './MeasurementsTab'
 import DietListsTab from './DietListsTab'
 import ProgressTab from './ProgressTab'
-
-type Client = {
-  id: string
-  name: string
-  phone: string | null
-  age: number | null
-  height: number | null
-  gender: string | null
-  notes: string | null
-  created_at: string
-}
+import { Client } from '@/lib/types'
 
 type ClientTabsProps = {
   clientId: string
