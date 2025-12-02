@@ -4,11 +4,14 @@ import BookingClient from './BookingClient'
 
 // Dynamic metadata generation for SEO
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+  // CRITICAL: Convert slug to lowercase for case-insensitive matching
+  const lowerCaseSlug = params.slug.toLowerCase()
+  
   const { data: profile } = await supabase
     .from('profiles')
     .select('full_name, clinic_name, bio')
-    .eq('public_slug', params.slug)
-    .single()
+    .ilike('public_slug', lowerCaseSlug) // Use ilike for case-insensitive matching
+    .maybeSingle()
 
   if (!profile) {
     return {
@@ -44,6 +47,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default function BookingPage({ params }: { params: { slug: string } }) {
-  return <BookingClient slug={params.slug} />
+  // CRITICAL: Convert slug to lowercase for case-insensitive matching
+  const lowerCaseSlug = params.slug.toLowerCase()
+  return <BookingClient slug={lowerCaseSlug} />
 }
 

@@ -42,13 +42,32 @@ export default function BookingClient({ slug }: BookingClientProps) {
 
   const loadProfile = async () => {
     try {
-      const { data, error } = await supabase
+      // CRITICAL: Ensure slug is lowercase for case-insensitive matching
+      const lowerCaseSlug = slug.toLowerCase()
+      
+      // Try case-insensitive match first using ilike
+      let { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('public_slug', slug)
-        .single()
+        .ilike('public_slug', lowerCaseSlug) // Use ilike for case-insensitive matching
+        .maybeSingle()
+
+      // Fallback: Try exact match with original slug case
+      if (!data && !error) {
+        const fallbackResult = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('public_slug', slug)
+          .maybeSingle()
+        
+        if (fallbackResult.data) {
+          data = fallbackResult.data
+          error = fallbackResult.error
+        }
+      }
 
       if (error || !data) {
+        console.error('Error loading profile:', error)
         setLoading(false)
         return
       }
@@ -71,7 +90,7 @@ export default function BookingClient({ slug }: BookingClientProps) {
       .from('appointments')
       .select('start_time, status')
       .eq('dietitian_id', profile.id)
-      .in('status', ['pending', 'approved'])
+      .in('status', ['pending', 'approved', 'confirmed', 'completed']) // Include all blocking statuses
       .gte('start_time', startOfDayDate.toISOString())
       .lte('start_time', endOfDayDate.toISOString())
 
