@@ -20,3 +20,4 @@ WHERE work_start_hour IS NULL OR work_end_hour IS NULL OR session_duration IS NU
 
 
 
+

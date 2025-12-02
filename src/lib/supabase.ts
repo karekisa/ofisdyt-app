@@ -18,6 +18,7 @@ export type Profile = {
   work_start_hour: number | null
   work_end_hour: number | null
   session_duration: number | null
+  profession: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
   created_at: string
 }
 

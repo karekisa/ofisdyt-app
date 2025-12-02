@@ -20,6 +20,7 @@ export type Database = {
           subscription_status: 'active' | 'expired' | 'suspended' | null
           subscription_ends_at: string | null
           trial_ends_at: string | null
+          profession: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
           created_at: string
         }
         Insert: {
@@ -38,6 +39,7 @@ export type Database = {
           subscription_status?: 'active' | 'expired' | 'suspended' | null
           subscription_ends_at?: string | null
           trial_ends_at?: string | null
+          profession?: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
           created_at?: string
         }
         Update: {
@@ -55,6 +57,7 @@ export type Database = {
           is_admin?: boolean | null
           subscription_status?: 'active' | 'expired' | 'suspended' | null
           subscription_ends_at?: string | null
+          profession?: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
         }
       }
       clients: {

@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import { X, Trash2 } from 'lucide-react'
+import { X } from 'lucide-react'
 
 type Client = {
   id: string
@@ -15,44 +15,27 @@ type Client = {
 }
 
 type EditClientDialogProps = {
-  isOpen: boolean
+  client: Client
   onClose: () => void
   onSuccess: () => void
-  onDelete: () => void
-  client: Client
 }
 
 export default function EditClientDialog({
-  isOpen,
+  client,
   onClose,
   onSuccess,
-  onDelete,
-  client,
 }: EditClientDialogProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    age: '',
-    height: '',
-    gender: '',
-    notes: '',
+    name: client.name,
+    phone: client.phone || '',
+    age: client.age?.toString() || '',
+    height: client.height?.toString() || '',
+    gender: client.gender || '',
+    notes: client.notes || '',
   })
 
-  useEffect(() => {
-    if (client && isOpen) {
-      setFormData({
-        name: client.name || '',
-        phone: client.phone || '',
-        age: client.age?.toString() || '',
-        height: client.height?.toString() || '',
-        gender: client.gender || '',
-        notes: client.notes || '',
-      })
-    }
-  }, [client, isOpen])
-
-  const handleUpdate = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
@@ -70,51 +53,27 @@ export default function EditClientDialog({
 
     if (error) {
       alert('Güncellenirken hata: ' + error.message)
-      setLoading(false)
-      return
+    } else {
+      onSuccess()
     }
 
-    alert('Bilgiler güncellendi')
     setLoading(false)
-    onSuccess()
   }
-
-  const handleDelete = () => {
-    const confirmed = window.confirm(
-      'DİKKAT: Bu danışanı silerseniz tüm randevuları, ölçümleri ve diyet listeleri de silinecektir. Emin misiniz?'
-    )
-    if (!confirmed) {
-      return
-    }
-
-    onDelete()
-  }
-
-  if (!isOpen) return null
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-white rounded-lg shadow-xl w-full max-w-[95vw] md:max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Danışan Bilgilerini Düzenle</h2>
+          <h2 className="text-2xl font-bold text-gray-900">Danışan Düzenle</h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            aria-label="Kapat"
+            className="text-gray-400 hover:text-gray-600 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-6 h-6" />
           </button>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleUpdate} className="flex-1 overflow-y-auto p-6 space-y-6">
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Ad <span className="text-red-500">*</span>
@@ -123,7 +82,9 @@ export default function EditClientDialog({
               type="text"
               required
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
               placeholder="Danışan adı"
             />
@@ -136,7 +97,9 @@ export default function EditClientDialog({
             <input
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
               placeholder="+90 555 123 4567"
             />
@@ -151,7 +114,9 @@ export default function EditClientDialog({
                 type="number"
                 min="0"
                 value={formData.age}
-                onChange={(e) => setFormData({ ...formData, age: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, age: e.target.value })
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 placeholder="Yaş"
               />
@@ -166,7 +131,9 @@ export default function EditClientDialog({
                 min="0"
                 step="0.1"
                 value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, height: e.target.value })
+                }
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 placeholder="Boy (cm)"
               />
@@ -179,7 +146,9 @@ export default function EditClientDialog({
             </label>
             <select
               value={formData.gender}
-              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, gender: e.target.value })
+              }
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
             >
               <option value="">Cinsiyet seçin</option>
@@ -195,49 +164,33 @@ export default function EditClientDialog({
             </label>
             <textarea
               value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, notes: e.target.value })
+              }
               rows={4}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
               placeholder="Danışan hakkında ek notlar"
             />
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+          <div className="flex space-x-4 pt-4">
             <button
               type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              className="inline-flex items-center space-x-2 px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-center font-medium"
             >
-              <Trash2 className="w-4 h-4" />
-              <span>Sil</span>
+              İptal
             </button>
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                disabled={loading}
-                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 font-medium"
-              >
-                İptal
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-              >
-                {loading ? 'Kaydediliyor...' : 'Kaydet'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            >
+              {loading ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
           </div>
         </form>
       </div>
     </div>
   )
 }
-
-
-
-
-

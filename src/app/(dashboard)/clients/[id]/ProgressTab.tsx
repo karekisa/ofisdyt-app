@@ -20,6 +20,7 @@ type Measurement = {
   date: string
   weight: number | null
   body_fat_ratio: number | null
+  created_at: string
 }
 
 export default function ProgressTab({ clientId }: { clientId: string }) {

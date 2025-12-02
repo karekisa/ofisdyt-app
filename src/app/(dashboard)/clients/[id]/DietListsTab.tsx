@@ -19,13 +19,18 @@ type DietListsTabProps = {
   clientId: string
   clientName: string
   clientPhone: string | null
+  profession?: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
 }
 
 export default function DietListsTab({
   clientId,
   clientName,
   clientPhone,
+  profession,
 }: DietListsTabProps) {
+  const isPT = profession === 'pt'
+  const listLabel = isPT ? 'Egzersiz Programı' : 'Diyet Listesi'
+  const listLabelPlural = isPT ? 'Egzersiz Programları' : 'Diyet Listeleri'
   const [dietLists, setDietLists] = useState<DietList[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -106,26 +111,26 @@ export default function DietListsTab({
     <div className="space-y-6">
       {/* Header with Add Button */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Diyet Listeleri</h3>
+        <h3 className="text-lg font-semibold text-gray-900">{listLabelPlural}</h3>
         <button
           onClick={handleAddNew}
           className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
         >
           <Plus className="w-4 h-4" />
-          <span>Yeni Liste Ekle</span>
+          <span>Yeni {listLabel} Ekle</span>
         </button>
       </div>
 
       {/* Diet Lists */}
       {dietLists.length === 0 ? (
         <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-gray-500 mb-4">Henüz diyet listesi eklenmemiş.</p>
+          <p className="text-gray-500 mb-4">Henüz {listLabel.toLowerCase()} eklenmemiş.</p>
           <button
             onClick={handleAddNew}
             className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
           >
             <Plus className="w-4 h-4" />
-            <span>İlk Listeyi Oluştur</span>
+            <span>İlk {listLabel} Oluştur</span>
           </button>
         </div>
       ) : (
