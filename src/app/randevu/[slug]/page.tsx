@@ -4,64 +4,93 @@ import BookingClient from './BookingClient'
 
 // Robust query function to fetch profile by slug
 async function fetchProfileBySlug(slug: string) {
-  // Normalize slug: lowercase and trim
-  const searchSlug = slug.toLowerCase().trim()
-  
-  // Robust query: Try both exact match and case-insensitive match
-  // DO NOT join auth.users - this causes permission errors for public users
-  // Use .or() to try both exact and case-insensitive matching
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration, phone, website, avatar_url')
-    .or(`public_slug.eq.${searchSlug},public_slug.ilike.${searchSlug}`) // Try exact and case-insensitive
-    .maybeSingle()
+  try {
+    // Normalize slug: lowercase and trim
+    const searchSlug = slug.toLowerCase().trim()
+    
+    // Validate slug is not empty
+    if (!searchSlug) {
+      return { profile: null, error: { message: 'Slug is empty' }, normalizedSlug: searchSlug }
+    }
+    
+    // Robust query: Try both exact match and case-insensitive match
+    // DO NOT join auth.users - this causes permission errors for public users
+    // Use .or() to try both exact and case-insensitive matching
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, clinic_name, bio, public_slug, work_start_hour, work_end_hour, session_duration, phone, website, avatar_url')
+      .or(`public_slug.eq.${searchSlug},public_slug.ilike.${searchSlug}`) // Try exact and case-insensitive
+      .maybeSingle()
 
-  return { profile, error, normalizedSlug: searchSlug }
+    return { profile, error, normalizedSlug: searchSlug }
+  } catch (err) {
+    // Catch any unexpected errors
+    console.error('[fetchProfileBySlug] Exception:', err)
+    return { 
+      profile: null, 
+      error: { 
+        message: err instanceof Error ? err.message : 'Unknown error',
+        code: 'EXCEPTION'
+      }, 
+      normalizedSlug: slug.toLowerCase().trim() 
+    }
+  }
 }
 
 // Dynamic metadata generation for SEO
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const { profile, error } = await fetchProfileBySlug(params.slug)
-  
-  // Server-side debugging (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[generateMetadata] Searching for slug:', params.slug)
-    console.log('[generateMetadata] Found profile:', profile ? 'Yes' : 'No')
-    if (error) {
-      console.error('[generateMetadata] Supabase error:', error)
+  try {
+    const { profile, error } = await fetchProfileBySlug(params.slug)
+    
+    // Server-side debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[generateMetadata] Searching for slug:', params.slug)
+      console.log('[generateMetadata] Found profile:', profile ? 'Yes' : 'No')
+      if (error) {
+        console.error('[generateMetadata] Supabase error:', error)
+      }
     }
-  }
 
-  if (!profile || error) {
+    // If profile not found or error, return default metadata
+    if (!profile || error) {
+      return {
+        title: 'Diyetisyen Bulunamadı',
+        description: 'Aradığınız diyetisyen bulunamadı.',
+      }
+    }
+
+    // Safely access profile properties with null checks
+    const name = profile?.full_name || 'Diyetisyen'
+    const title = `Dyt. ${name} - Online Randevu`
+    const description = profile?.bio 
+      ? `${profile.bio.substring(0, 150)}... Dyt. ${name} ile sağlıklı yaşam için hemen randevu oluşturun.`
+      : `Dyt. ${name} ile sağlıklı yaşam için hemen randevu oluşturun.`
+
+    return {
+      title,
+      description,
+      openGraph: {
+        title,
+        description,
+        type: 'website',
+        url: `https://diyetlik.com.tr/randevu/${params.slug}`,
+        images: [
+          {
+            url: '/logo.png',
+            width: 1200,
+            height: 630,
+            alt: `Dyt. ${name} - Diyetlik`,
+          },
+        ],
+      },
+    }
+  } catch (err) {
+    // Catch any unexpected errors in metadata generation
+    console.error('[generateMetadata] Exception:', err)
     return {
       title: 'Diyetisyen Bulunamadı',
       description: 'Aradığınız diyetisyen bulunamadı.',
     }
-  }
-
-  const name = profile.full_name || 'Diyetisyen'
-  const title = `Dyt. ${name} - Online Randevu`
-  const description = profile.bio 
-    ? `${profile.bio.substring(0, 150)}... Dyt. ${name} ile sağlıklı yaşam için hemen randevu oluşturun.`
-    : `Dyt. ${name} ile sağlıklı yaşam için hemen randevu oluşturun.`
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: 'website',
-      url: `https://diyetlik.com.tr/randevu/${params.slug}`,
-      images: [
-        {
-          url: '/logo.png',
-          width: 1200,
-          height: 630,
-          alt: `Dyt. ${name} - Diyetlik`,
-        },
-      ],
-    },
   }
 }
 
@@ -127,25 +156,52 @@ function DebugErrorComponent({ slug, error, normalizedSlug }: { slug: string; er
 }
 
 export default async function BookingPage({ params }: { params: { slug: string } }) {
-  // Fetch profile data on server-side
-  const { profile, error, normalizedSlug } = await fetchProfileBySlug(params.slug)
-  
-  // Server-side debugging
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[BookingPage] Server-side fetch - Slug:', params.slug)
-    console.log('[BookingPage] Normalized slug:', normalizedSlug)
-    console.log('[BookingPage] Profile found:', profile ? 'Yes' : 'No')
-    if (error) {
-      console.error('[BookingPage] Supabase error:', error)
+  try {
+    // Validate params
+    if (!params?.slug) {
+      return <DebugErrorComponent slug="" error={{ message: 'Slug parameter is missing' }} normalizedSlug="" />
     }
-  }
 
-  // If profile not found, show debug error component
-  if (!profile) {
-    return <DebugErrorComponent slug={params.slug} error={error} normalizedSlug={normalizedSlug} />
-  }
+    // Fetch profile data on server-side
+    const { profile, error, normalizedSlug } = await fetchProfileBySlug(params.slug)
+    
+    // Server-side debugging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[BookingPage] Server-side fetch - Slug:', params.slug)
+      console.log('[BookingPage] Normalized slug:', normalizedSlug)
+      console.log('[BookingPage] Profile found:', profile ? 'Yes' : 'No')
+      if (error) {
+        console.error('[BookingPage] Supabase error:', error)
+      }
+    }
 
-  // Pass normalized slug to client component
-  return <BookingClient slug={normalizedSlug} />
+    // CRITICAL: If profile is null, DO NOT try to access profile properties
+    // Render error component immediately
+    if (!profile) {
+      return <DebugErrorComponent slug={params.slug} error={error} normalizedSlug={normalizedSlug} />
+    }
+
+    // Validate profile has required fields before passing to client
+    if (!profile.id) {
+      console.error('[BookingPage] Profile missing required id field')
+      return <DebugErrorComponent slug={params.slug} error={{ message: 'Profile data is invalid' }} normalizedSlug={normalizedSlug} />
+    }
+
+    // Pass normalized slug to client component
+    return <BookingClient slug={normalizedSlug} />
+  } catch (err) {
+    // Catch any unexpected errors and show error component
+    console.error('[BookingPage] Exception:', err)
+    return (
+      <DebugErrorComponent 
+        slug={params?.slug || ''} 
+        error={{ 
+          message: err instanceof Error ? err.message : 'Unexpected server error',
+          code: 'SERVER_EXCEPTION'
+        }} 
+        normalizedSlug={params?.slug?.toLowerCase().trim() || ''} 
+      />
+    )
+  }
 }
 
