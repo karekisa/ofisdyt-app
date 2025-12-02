@@ -19,18 +19,15 @@ type DietListsTabProps = {
   clientId: string
   clientName: string
   clientPhone: string | null
-  profession?: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
 }
 
 export default function DietListsTab({
   clientId,
   clientName,
   clientPhone,
-  profession,
 }: DietListsTabProps) {
-  const isPT = profession === 'pt'
-  const listLabel = isPT ? 'Egzersiz Programı' : 'Diyet Listesi'
-  const listLabelPlural = isPT ? 'Egzersiz Programları' : 'Diyet Listeleri'
+  const listLabel = 'Diyet Listesi'
+  const listLabelPlural = 'Diyet Listeleri'
   const [dietLists, setDietLists] = useState<DietList[]>([])
   const [loading, setLoading] = useState(true)
   const [isDialogOpen, setIsDialogOpen] = useState(false)

@@ -56,15 +56,140 @@ export default function LandingPage() {
             </Button>
           </Link>
 
-          {/* Hero Visual Placeholder */}
-          <div className="mt-16 max-w-5xl mx-auto">
-            <div className="bg-gradient-to-br from-green-50 to-gray-50 rounded-xl border border-gray-200 p-8 shadow-xl">
-              <div className="aspect-video bg-white rounded-lg border border-gray-200 flex items-center justify-center">
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-green-100 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                    <Calendar className="w-12 h-12 text-green-600" />
+          {/* Hero Dashboard Mockup */}
+          <div className="mt-16 max-w-6xl mx-auto">
+            <div className="relative" style={{ perspective: '1000px' }}>
+              <div className="transform shadow-2xl rounded-xl overflow-hidden border border-gray-200 bg-white" style={{ transform: 'rotateX(2deg)' }}>
+                {/* Mac-style Window Header */}
+                <div className="bg-gray-100 px-4 py-3 flex items-center space-x-2 border-b border-gray-200">
+                  <div className="flex space-x-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
-                  <p className="text-gray-500 text-sm">Diyetlik Dashboard Önizlemesi</p>
+                  <div className="flex-1 text-center">
+                    <span className="text-xs text-gray-500 font-medium">diyetlik.com/dashboard</span>
+                  </div>
+                </div>
+
+                {/* Dashboard Content */}
+                <div className="flex bg-gray-50">
+                  {/* Left Sidebar */}
+                  <div className="w-1/4 bg-teal-50 border-r border-teal-100 p-4">
+                    <div className="space-y-3">
+                      {/* Logo */}
+                      <div className="flex items-center space-x-2 mb-6">
+                        <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">D</span>
+                        </div>
+                        <div className="h-4 w-16 bg-green-600 rounded"></div>
+                      </div>
+                      
+                      {/* Menu Items */}
+                      {['Panel', 'Danışanlar', 'Takvim', 'Finans', 'Ayarlar'].map((item, idx) => (
+                        <div key={idx} className="flex items-center space-x-2">
+                          <div className="w-4 h-4 bg-teal-200 rounded"></div>
+                          <div className={`h-3 rounded ${idx === 0 ? 'w-12 bg-teal-600' : 'w-16 bg-teal-300'}`}></div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Main Content */}
+                  <div className="flex-1 p-6 space-y-6">
+                    {/* Header */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="h-6 w-32 bg-gray-300 rounded mb-2"></div>
+                        <div className="h-4 w-48 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+
+                    {/* Stats Cards */}
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="h-3 w-20 bg-gray-300 rounded mb-3"></div>
+                        <div className="h-8 w-24 bg-green-100 rounded mb-2"></div>
+                        <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="h-3 w-20 bg-gray-300 rounded mb-3"></div>
+                        <div className="h-8 w-24 bg-blue-100 rounded mb-2"></div>
+                        <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                      </div>
+                      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div className="h-3 w-20 bg-gray-300 rounded mb-3"></div>
+                        <div className="h-8 w-24 bg-yellow-100 rounded mb-2"></div>
+                        <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                      </div>
+                    </div>
+
+                    {/* Chart Area */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="h-4 w-32 bg-gray-300 rounded mb-4"></div>
+                      <div className="h-48 relative">
+                        {/* Chart Grid Lines */}
+                        <div className="absolute inset-0 flex flex-col justify-between">
+                          {[...Array(5)].map((_, i) => (
+                            <div key={i} className="h-px bg-gray-100"></div>
+                          ))}
+                        </div>
+                        {/* Bezier Curve (Weight Loss Progress) */}
+                        <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
+                          <path
+                            d="M 20 160 Q 100 140, 180 120 T 360 80"
+                            fill="none"
+                            stroke="#10b981"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          />
+                          {/* Data Points */}
+                          <circle cx="20" cy="160" r="4" fill="#10b981" />
+                          <circle cx="100" cy="140" r="4" fill="#10b981" />
+                          <circle cx="180" cy="120" r="4" fill="#10b981" />
+                          <circle cx="260" cy="100" r="4" fill="#10b981" />
+                          <circle cx="340" cy="80" r="4" fill="#10b981" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    {/* Appointments List */}
+                    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                      <div className="h-4 w-40 bg-gray-300 rounded mb-4"></div>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-teal-200 rounded-full"></div>
+                            <div>
+                              <div className="h-3 w-24 bg-gray-300 rounded mb-2"></div>
+                              <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="h-6 w-20 bg-green-100 rounded"></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-teal-200 rounded-full"></div>
+                            <div>
+                              <div className="h-3 w-24 bg-gray-300 rounded mb-2"></div>
+                              <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="h-6 w-20 bg-yellow-100 rounded"></div>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-teal-200 rounded-full"></div>
+                            <div>
+                              <div className="h-3 w-24 bg-gray-300 rounded mb-2"></div>
+                              <div className="h-2 w-16 bg-gray-200 rounded"></div>
+                            </div>
+                          </div>
+                          <div className="h-6 w-20 bg-green-100 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

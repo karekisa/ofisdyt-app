@@ -15,7 +15,6 @@ export default function ClientDetailPage() {
   const clientId = params.id as string
 
   const [client, setClient] = useState<Client | null>(null)
-  const [profession, setProfession] = useState<'dietitian' | 'psychologist' | 'pt' | 'consultant' | null>(null)
   const [loading, setLoading] = useState(true)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [stats, setStats] = useState<{
@@ -42,17 +41,6 @@ export default function ClientDetailPage() {
       return
     }
 
-    // Fetch user's profession
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('profession')
-      .eq('id', user.id)
-      .single()
-
-    if (profile) {
-      setProfession(profile.profession as typeof profession)
-    }
-
     // Fetch client data
     const { data: clientData, error } = await supabase
       .from('clients')
@@ -70,8 +58,8 @@ export default function ClientDetailPage() {
       setClient(clientData as Client)
     }
 
-    // Calculate BMI/BMR/Ideal Weight if dietitian
-    if (profile?.profession === 'dietitian' && clientData) {
+    // Calculate BMI/BMR/Ideal Weight
+    if (clientData) {
       calculateStats(clientData as Client)
     } else {
       setLoading(false)
@@ -192,8 +180,8 @@ export default function ClientDetailPage() {
           )}
         </div>
 
-        {/* BMI/BMR Stats (only for dietitians) */}
-        {profession === 'dietitian' && (stats.bmi !== null || stats.bmr !== null || stats.idealWeight !== null) && (
+        {/* BMI/BMR Stats */}
+        {(stats.bmi !== null || stats.bmr !== null || stats.idealWeight !== null) && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
             {stats.bmi !== null && (
               <div>
@@ -221,7 +209,6 @@ export default function ClientDetailPage() {
       <ClientTabs
         clientId={clientId}
         client={client}
-        profession={profession}
       />
 
       {/* Edit Dialog */}

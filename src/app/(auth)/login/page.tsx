@@ -12,18 +12,11 @@ export default function LoginPage() {
     email: '',
     password: '',
     fullName: '',
-    profession: '' as 'dietitian' | 'psychologist' | 'pt' | 'consultant' | '',
   })
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-
-    if (!formData.profession) {
-      alert('Lütfen mesleğinizi seçin')
-      setLoading(false)
-      return
-    }
 
     // Sign up with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -32,7 +25,6 @@ export default function LoginPage() {
       options: {
         data: {
           full_name: formData.fullName,
-          profession: formData.profession,
         },
       },
     })
@@ -52,11 +44,10 @@ export default function LoginPage() {
         .single()
 
       if (!existingProfile) {
-        // Create profile with profession if it doesn't exist
+        // Create profile if it doesn't exist (trigger should handle this, but just in case)
         const { error: profileError } = await supabase.from('profiles').insert({
           id: authData.user.id,
           full_name: formData.fullName,
-          profession: formData.profession,
         })
 
         if (profileError) {
@@ -65,12 +56,11 @@ export default function LoginPage() {
           return
         }
       } else {
-        // Update existing profile with profession if it was created by trigger
+        // Update existing profile if it was created by trigger
         await supabase
           .from('profiles')
           .update({
             full_name: formData.fullName,
-            profession: formData.profession,
           })
           .eq('id', authData.user.id)
       }
@@ -86,7 +76,7 @@ export default function LoginPage() {
 
       alert('Kayıt başarılı! Giriş yapabilirsiniz.')
       setIsSignUp(false)
-      setFormData({ email: '', password: '', fullName: '', profession: '' })
+      setFormData({ email: '', password: '', fullName: '' })
     }
 
     setLoading(false)
@@ -153,30 +143,6 @@ export default function LoginPage() {
             </div>
           )}
 
-          {isSignUp && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mesleğiniz <span className="text-red-500">*</span>
-              </label>
-              <select
-                required
-                value={formData.profession}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    profession: e.target.value as typeof formData.profession,
-                  })
-                }
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-              >
-                <option value="">Meslek seçin</option>
-                <option value="dietitian">Diyetisyen</option>
-                <option value="psychologist">Psikolog / Terapist</option>
-                <option value="pt">Spor Eğitmeni / PT</option>
-                <option value="consultant">Diğer / Danışman</option>
-              </select>
-            </div>
-          )}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -230,7 +196,7 @@ export default function LoginPage() {
               type="button"
               onClick={() => {
                 setIsSignUp(!isSignUp)
-                setFormData({ email: '', password: '', fullName: '', profession: '' })
+                setFormData({ email: '', password: '', fullName: '' })
               }}
               className="text-sm text-green-600 hover:text-green-700 font-medium"
             >

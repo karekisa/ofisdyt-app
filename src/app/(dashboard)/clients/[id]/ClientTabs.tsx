@@ -9,32 +9,17 @@ import { Client } from '@/lib/types'
 type ClientTabsProps = {
   clientId: string
   client: Client
-  profession: 'dietitian' | 'psychologist' | 'pt' | 'consultant' | null
 }
 
-export default function ClientTabs({ clientId, client, profession }: ClientTabsProps) {
+export default function ClientTabs({ clientId, client }: ClientTabsProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
-  // Determine which tabs to show based on profession
-  const isDietitian = profession === 'dietitian'
-  const isPT = profession === 'pt'
-
-  // For dietitians: show all tabs
-  // For PT: show Overview and Diet Lists (renamed to Workouts)
-  // For others: show only Overview (Info) and Session Notes
-
+  // Always show all tabs for dietitians
   const tabs = [
-    { id: 'overview', label: isDietitian ? 'Genel Bakış' : 'Bilgiler' },
-    ...(isDietitian
-      ? [
-          { id: 'measurements', label: 'Ölçümler' },
-          { id: 'diet-lists', label: 'Diyet Listeleri' },
-          { id: 'progress', label: 'Gelişim' },
-        ]
-      : isPT
-        ? [{ id: 'diet-lists', label: 'Egzersiz Programı' }]
-        : []),
-    ...(!isDietitian ? [{ id: 'notes', label: 'Seans Notları' }] : []),
+    { id: 'overview', label: 'Genel Bakış' },
+    { id: 'measurements', label: 'Ölçümler' },
+    { id: 'diet-lists', label: 'Diyet Listeleri' },
+    { id: 'progress', label: 'Gelişim' },
   ]
 
   return (
@@ -116,39 +101,20 @@ export default function ClientTabs({ clientId, client, profession }: ClientTabsP
           </div>
         )}
 
-        {activeTab === 'measurements' && isDietitian && (
+        {activeTab === 'measurements' && (
           <MeasurementsTab clientId={clientId} />
         )}
 
-        {activeTab === 'diet-lists' && (isDietitian || isPT) && (
+        {activeTab === 'diet-lists' && (
           <DietListsTab
             clientId={clientId}
             clientName={client.name}
             clientPhone={client.phone}
-            profession={profession}
           />
         )}
 
-        {activeTab === 'progress' && isDietitian && (
+        {activeTab === 'progress' && (
           <ProgressTab clientId={clientId} />
-        )}
-
-        {activeTab === 'notes' && !isDietitian && (
-          <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-900">Seans Notları</h3>
-            {client.notes ? (
-              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                <p className="text-gray-900 whitespace-pre-wrap">{client.notes}</p>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500">
-                <p>Henüz seans notu eklenmemiş.</p>
-                <p className="text-sm mt-2">
-                  Notları eklemek için danışan bilgilerini düzenleyin.
-                </p>
-              </div>
-            )}
-          </div>
         )}
       </div>
     </div>
