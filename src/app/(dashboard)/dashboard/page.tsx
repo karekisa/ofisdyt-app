@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Users, Calendar, DollarSign, Clock } from 'lucide-react'
+import { Users, Calendar, DollarSign, Clock, Link as LinkIcon, Copy, Check } from 'lucide-react'
 import Link from 'next/link'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
+import { toast } from 'sonner'
 
 export default function DashboardPage() {
   const [stats, setStats] = useState({
@@ -20,6 +21,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   const [userName, setUserName] = useState<string>('')
+  const [publicSlug, setPublicSlug] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -33,15 +35,18 @@ export default function DashboardPage() {
 
     setUser(user)
 
-    // Get user profile for name
+    // Get user profile for name and slug
     const { data: profile } = await supabase
       .from('profiles')
-      .select('full_name')
+      .select('full_name, public_slug')
       .eq('id', user.id)
       .single()
 
     if (profile?.full_name) {
       setUserName(profile.full_name)
+    }
+    if (profile?.public_slug) {
+      setPublicSlug(profile.public_slug)
     }
 
     // Get total clients
@@ -264,7 +269,80 @@ export default function DashboardPage() {
           <p className="text-gray-500">Bekleyen randevu talebi yok</p>
         </div>
       )}
+
+      {/* Booking Link Share Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <LinkIcon className="w-5 h-5 text-green-600" />
+            <h2 className="text-xl font-semibold text-gray-900">
+              Randevu Linkiniz
+            </h2>
+          </div>
+          <Link
+            href="/settings"
+            className="text-sm text-green-600 hover:text-green-700 font-medium"
+          >
+            Ayarlardan Düzenle
+          </Link>
+        </div>
+        {publicSlug ? (
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <code className="flex-1 text-sm text-gray-700 font-mono">
+                ofisdyt.com/book/{publicSlug}
+              </code>
+              <CopyButton text={`https://ofisdyt.com/book/${publicSlug}`} />
+            </div>
+            <p className="text-sm text-gray-600">
+              Bu linki danışanlarınızla paylaşarak randevu almalarını sağlayabilirsiniz.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              Randevu linkinizi oluşturmak için ayarlar sayfasından bir slug belirleyin.
+            </p>
+            <Link
+              href="/settings"
+              className="inline-flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+            >
+              <LinkIcon className="w-4 h-4" />
+              <span>Link Oluştur</span>
+            </Link>
+          </div>
+        )}
+      </div>
     </div>
+  )
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      toast.success('Link kopyalandı!')
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      toast.error('Kopyalama başarısız')
+    }
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
+      title="Kopyala"
+    >
+      {copied ? (
+        <Check className="w-4 h-4 text-green-600" />
+      ) : (
+        <Copy className="w-4 h-4 text-gray-600" />
+      )}
+    </button>
   )
 }
 

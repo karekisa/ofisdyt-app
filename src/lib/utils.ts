@@ -1,17 +1,42 @@
-import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
 
-/**
- * Utility function to merge Tailwind CSS classes
- */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
 /**
+ * Get initials from a full name
+ * @param name - Full name (e.g., "Ahmet Yılmaz" or "Dr. Ayşe Demir")
+ * @returns Initials in uppercase (e.g., "AY" or "AD")
+ */
+export function getInitials(name: string | null | undefined): string {
+  if (!name || name.trim().length === 0) {
+    return '??'
+  }
+
+  const words = name.trim().split(/\s+/).filter(word => word.length > 0)
+  
+  if (words.length === 0) {
+    return '??'
+  }
+
+  if (words.length === 1) {
+    // Single word: take first two letters
+    return words[0].substring(0, 2).toUpperCase()
+  }
+
+  // Multiple words: take first letter of first and last word
+  const firstInitial = words[0].charAt(0).toUpperCase()
+  const lastInitial = words[words.length - 1].charAt(0).toUpperCase()
+  
+  return `${firstInitial}${lastInitial}`
+}
+
+/**
  * Format phone number for WhatsApp API
  * WhatsApp requires format: Country Code + Number (e.g., 905321234567)
- * 
+ *
  * @param phone - Phone number in any format (e.g., "0532 123 45 67", "+90 532...", "532...")
  * @returns Formatted phone number (e.g., "905321234567") or null if invalid
  */
@@ -68,10 +93,3 @@ export function formatPhoneForWhatsapp(phone: string | null | undefined): string
   // Invalid format
   return null
 }
-
-
-
-
-
-
-

@@ -2,11 +2,12 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Calendar, Clock, User, Phone, MessageSquare, CheckCircle, X } from 'lucide-react'
+import { Calendar, Clock, Phone, MessageSquare, CheckCircle, X } from 'lucide-react'
 import { format, addDays, isPast, setHours, setMinutes, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { generateTimeSlots } from '@/app/(dashboard)/calendar/utils'
 import { Profile, Appointment } from '@/lib/types'
+import { getInitials } from '@/lib/utils'
 
 export default function BookingPage({ params }: { params: { slug: string } }) {
   const [loading, setLoading] = useState(true)
@@ -194,22 +195,19 @@ export default function BookingPage({ params }: { params: { slug: string } }) {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-6">
               <div className="text-center mb-6">
-                {profile.avatar_url ? (
-                  <img
-                    src={profile.avatar_url}
-                    alt={profile.full_name || 'Diyetisyen'}
-                    className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-green-100 flex items-center justify-center">
-                    <User className="w-12 h-12 text-green-600" />
-                  </div>
-                )}
+                {/* Text-Based Avatar with Initials */}
+                <div className="w-24 h-24 rounded-full mx-auto mb-4 bg-gradient-to-br from-green-400 to-teal-500 flex items-center justify-center shadow-lg">
+                  <span className="text-white text-3xl font-bold">
+                    {getInitials(profile.full_name)}
+                  </span>
+                </div>
                 <h1 className="text-2xl font-bold text-gray-900 mb-1">
                   {profile.full_name || 'Diyetisyen'}
                 </h1>
                 {profile.clinic_name && (
-                  <p className="text-gray-600 mb-4">{profile.clinic_name}</p>
+                  <p className="text-lg text-gray-600 mb-4 font-medium">
+                    {profile.clinic_name}
+                  </p>
                 )}
               </div>
 
