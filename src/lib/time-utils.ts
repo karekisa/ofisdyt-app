@@ -90,3 +90,4 @@ export function generateTimeSlotsFromHours(
   return generateTimeSlots(startStr, endStr, sessionDuration)
 }
 
+

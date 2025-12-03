@@ -114,7 +114,7 @@ export default function ClientTabs({ clientId, client }: ClientTabsProps) {
         )}
 
         {activeTab === 'progress' && (
-          <ProgressTab clientId={clientId} />
+          <ProgressTab clientId={clientId} client={client} />
         )}
       </div>
     </div>

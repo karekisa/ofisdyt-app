@@ -84,6 +84,9 @@ export interface Measurement {
   date: string
   weight: number | null
   body_fat_ratio: number | null
+  muscle_ratio?: number | null
+  water_ratio?: number | null
+  waist_circumference?: number | null
   created_at: string
 }
 

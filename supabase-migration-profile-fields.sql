@@ -9,3 +9,4 @@ ADD COLUMN IF NOT EXISTS bio TEXT;
 
 
 
+

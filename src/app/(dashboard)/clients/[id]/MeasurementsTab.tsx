@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Plus, Trash2 } from 'lucide-react'
+import { Plus, Trash2, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -12,6 +12,91 @@ type Measurement = {
   weight: number | null
   body_fat_ratio: number | null
   created_at: string
+}
+
+// Sparkline component for weight trends
+function WeightSparkline({ 
+  currentMeasurement, 
+  allMeasurements 
+}: { 
+  currentMeasurement: Measurement
+  allMeasurements: Measurement[]
+}) {
+  // Get all measurements with weight, sorted by date (ascending)
+  const sortedMeasurements = [...allMeasurements]
+    .filter((m) => m.weight !== null)
+    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  
+  // Get last 5 measurements
+  const last5 = sortedMeasurements.slice(-5)
+  
+  if (last5.length < 2) {
+    return (
+      <span className="text-sm text-gray-900 font-medium">
+        {currentMeasurement.weight?.toFixed(1) || '-'}
+      </span>
+    )
+  }
+
+  const currentWeight = currentMeasurement.weight
+  if (!currentWeight) {
+    return <span className="text-gray-500">-</span>
+  }
+
+  // Find current measurement position in sorted list
+  const currentIndex = sortedMeasurements.findIndex((m) => m.id === currentMeasurement.id)
+  
+  // Calculate trend: compare with previous measurement
+  let trend: 'up' | 'down' | 'stable' = 'stable'
+  if (currentIndex > 0) {
+    const prevWeight = sortedMeasurements[currentIndex - 1]?.weight
+    if (prevWeight !== null && prevWeight !== undefined) {
+      const diff = currentWeight - prevWeight
+      trend = diff > 0.1 ? 'up' : diff < -0.1 ? 'down' : 'stable'
+    }
+  }
+
+  // Simple SVG sparkline for last 5 measurements
+  const weights = last5.map((m) => m.weight || 0)
+  const minWeight = Math.min(...weights)
+  const maxWeight = Math.max(...weights)
+  const range = maxWeight - minWeight || 1
+
+  const width = 60
+  const height = 20
+  const padding = 2
+
+  const points = weights.map((w, i) => {
+    const x = padding + (i * (width - padding * 2)) / (weights.length - 1 || 1)
+    const y = height - padding - ((w - minWeight) / range) * (height - padding * 2)
+    return `${x},${y}`
+  }).join(' ')
+
+  const Icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus
+  const color = trend === 'down' ? '#10b981' : trend === 'up' ? '#ef4444' : '#6b7280'
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm text-gray-900 font-medium">
+        {currentWeight.toFixed(1)}
+      </span>
+      {last5.length >= 2 && (
+        <div className="flex items-center gap-1">
+          <svg width={width} height={height} className="text-teal-500">
+            <polyline
+              points={points}
+              fill="none"
+              stroke="#14b8a6"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          {currentIndex > 0 && <Icon className="w-3 h-3" style={{ color }} />}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function MeasurementsTab({ clientId }: { clientId: string }) {
@@ -210,10 +295,15 @@ export default function MeasurementsTab({ clientId }: { clientId: string }) {
                       locale: tr,
                     })}
                   </td>
-                  <td className="py-3 px-4 text-sm text-gray-900">
-                    {measurement.weight !== null
-                      ? measurement.weight.toFixed(1)
-                      : '-'}
+                  <td className="py-3 px-4 text-sm">
+                    {measurement.weight !== null ? (
+                      <WeightSparkline
+                        currentMeasurement={measurement}
+                        allMeasurements={measurements}
+                      />
+                    ) : (
+                      <span className="text-gray-500">-</span>
+                    )}
                   </td>
                   <td className="py-3 px-4 text-sm text-gray-900">
                     {measurement.body_fat_ratio !== null
