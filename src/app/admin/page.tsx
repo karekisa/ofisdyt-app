@@ -20,11 +20,13 @@ import {
   HelpCircle,
   Edit,
   MessageSquare,
+  MessageCircle,
 } from 'lucide-react'
 import UserInspectorModal from './UserInspectorModal'
 import AnnouncementManager from './AnnouncementManager'
-import { format, addMonths, subMonths } from 'date-fns'
+import { format, addMonths, subMonths, formatDistanceToNow, differenceInDays } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { toast } from 'sonner'
 
 type UserWithEmail = {
   id: string
@@ -36,6 +38,10 @@ type UserWithEmail = {
   is_admin: boolean | null
   subscription_status: 'active' | 'expired' | 'suspended' | null
   subscription_ends_at: string | null
+  trial_ends_at: string | null
+  last_sign_in_at: string | null
+  client_count: number
+  appointment_count: number
   created_at: string
 }
 
@@ -65,17 +71,44 @@ export default function AdminPage() {
     }
   }, [isAuthorized])
 
-  // Filter users based on search term
+  // Filter and sort users - prioritize expiring trials
   const filteredUsers = useMemo(() => {
-    if (!searchTerm.trim()) return users
+    let filtered = users
 
-    const term = searchTerm.toLowerCase()
-    return users.filter(
-      (user) =>
-        user.full_name?.toLowerCase().includes(term) ||
-        user.email?.toLowerCase().includes(term) ||
-        user.clinic_name?.toLowerCase().includes(term)
-    )
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase()
+      filtered = users.filter(
+        (user) =>
+          user.full_name?.toLowerCase().includes(term) ||
+          user.email?.toLowerCase().includes(term) ||
+          user.clinic_name?.toLowerCase().includes(term)
+      )
+    }
+
+    // Sort: Expiring trials first (within 3 days), then by trial end date
+    return filtered.sort((a, b) => {
+      const aTrialEnd = a.trial_ends_at ? new Date(a.trial_ends_at) : null
+      const bTrialEnd = b.trial_ends_at ? new Date(b.trial_ends_at) : null
+      const now = new Date()
+
+      // Check if trial is expiring soon (<= 3 days)
+      const aExpiringSoon = aTrialEnd && differenceInDays(aTrialEnd, now) <= 3 && differenceInDays(aTrialEnd, now) >= 0
+      const bExpiringSoon = bTrialEnd && differenceInDays(bTrialEnd, now) <= 3 && differenceInDays(bTrialEnd, now) >= 0
+
+      // Expiring soon users first
+      if (aExpiringSoon && !bExpiringSoon) return -1
+      if (!aExpiringSoon && bExpiringSoon) return 1
+
+      // Then sort by trial end date (soonest first)
+      if (aTrialEnd && bTrialEnd) {
+        return aTrialEnd.getTime() - bTrialEnd.getTime()
+      }
+      if (aTrialEnd) return -1
+      if (bTrialEnd) return 1
+
+      return 0
+    })
   }, [users, searchTerm])
 
   const checkAdminAccess = async () => {
@@ -109,7 +142,7 @@ export default function AdminPage() {
     // Load from admin_users_view (includes email)
     const { data: profiles, error } = await supabase
       .from('admin_users_view')
-      .select('id, full_name, email, clinic_name, phone, public_slug, is_admin, subscription_status, subscription_ends_at, created_at')
+      .select('id, full_name, email, clinic_name, phone, public_slug, is_admin, subscription_status, subscription_ends_at, trial_ends_at, last_sign_in_at, client_count, appointment_count, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -121,7 +154,13 @@ export default function AdminPage() {
         .order('created_at', { ascending: false })
 
       if (fallbackData) {
-        setUsers(fallbackData.map((p) => ({ ...p, email: null })) as UserWithEmail[])
+        setUsers(fallbackData.map((p) => ({ 
+          ...p, 
+          email: null,
+          last_sign_in_at: null,
+          client_count: 0,
+          appointment_count: 0,
+        })) as UserWithEmail[])
       }
     } else if (profiles) {
       // Filter out admins for user count
@@ -283,7 +322,22 @@ export default function AdminPage() {
     return null
   }
 
-  const getStatusBadge = (status: string | null) => {
+  const getStatusBadge = (status: string | null, trialEndsAt: string | null) => {
+    // Check if trial is expiring soon
+    const trialExpiringSoon = trialEndsAt && (() => {
+      const trialEnd = new Date(trialEndsAt)
+      const daysLeft = differenceInDays(trialEnd, new Date())
+      return daysLeft <= 3 && daysLeft >= 0
+    })()
+
+    if (trialExpiringSoon) {
+      return (
+        <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800 animate-pulse">
+          ⚠️ Bitiyor!
+        </span>
+      )
+    }
+
     switch (status) {
       case 'active':
         return (
@@ -304,12 +358,43 @@ export default function AdminPage() {
           </span>
         )
       default:
+        // Trial status
+        if (trialEndsAt) {
+          const trialEnd = new Date(trialEndsAt)
+          const daysLeft = differenceInDays(trialEnd, new Date())
+          if (daysLeft < 0) {
+            return (
+              <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                Deneme Bitti
+              </span>
+            )
+          }
+          return (
+            <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+              Deneme ({daysLeft} gün)
+            </span>
+          )
+        }
         return (
           <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
             Belirtilmemiş
           </span>
         )
     }
+  }
+
+  const handleWhatsAppClick = (phone: string | null, e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!phone) {
+      toast.error('Telefon numarası bulunamadı')
+      return
+    }
+
+    // Format phone for WhatsApp (remove spaces, +, etc.)
+    const cleanPhone = phone.replace(/[\s\+\-\(\)]/g, '')
+    const message = encodeURIComponent('Merhaba, Diyetlik deneyiminiz nasıl gidiyor?')
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${message}`
+    window.open(whatsappUrl, '_blank')
   }
 
   return (
@@ -439,16 +524,16 @@ export default function AdminPage() {
                     Email
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Klinik Adı
+                    Durum
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Abonelik Durumu
+                    Deneme Bitiş
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Abonelik Bitiş
+                    Aktivite
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    İşlemler
+                    İletişim
                   </th>
                 </tr>
               </thead>
@@ -460,132 +545,164 @@ export default function AdminPage() {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                      onClick={() => {
-                        setSelectedUser(user)
-                        setIsInspectorOpen(true)
-                      }}
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {user.full_name || 'İsimsiz'}
-                            </div>
-                            {user.is_admin && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
-                                <Shield className="w-3 h-3 mr-1" />
-                                Admin
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-blue-600 font-mono">
-                          {user.email || '-'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.clinic_name || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {getStatusBadge(user.subscription_status)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {user.subscription_ends_at
-                          ? format(new Date(user.subscription_ends_at), 'd MMMM yyyy', {
-                              locale: tr,
-                            })
-                          : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => {
-                              setSelectedUser(user)
-                              setIsInspectorOpen(true)
-                            }}
-                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors bg-blue-600 text-white hover:bg-blue-700"
-                            title="Detayları Görüntüle/Düzenle"
-                          >
-                            <Edit className="w-3 h-3 mr-1" />
-                            Düzenle
-                          </button>
-                          <button
-                            onClick={() => handleToggleAdmin(user.id, user.is_admin || false)}
-                            className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors ${
-                              user.is_admin
-                                ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                                : 'bg-purple-600 text-white hover:bg-purple-700'
-                            }`}
-                            title={user.is_admin ? 'Admin Yetkisini Kaldır' : 'Admin Yap'}
-                          >
-                            <UserCog className="w-3 h-3 mr-1" />
-                            {user.is_admin ? 'Admin Kaldır' : 'Admin Yap'}
-                          </button>
+                  filteredUsers.map((user) => {
+                    const trialEndDate = user.trial_ends_at ? new Date(user.trial_ends_at) : null
+                    const isTrialExpired = trialEndDate && trialEndDate < new Date()
+                    const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null
 
-                          {/* Subscription Actions Dropdown */}
-                          <div className="relative">
+                    return (
+                      <tr
+                        key={user.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => {
+                          setSelectedUser(user)
+                          setIsInspectorOpen(true)
+                        }}
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {user.full_name || 'İsimsiz'}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {user.clinic_name || '-'}
+                              </div>
+                              {user.is_admin && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 mt-1">
+                                  <Shield className="w-3 h-3 mr-1" />
+                                  Admin
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-blue-600 font-mono">
+                            {user.email || '-'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(user.subscription_status, user.trial_ends_at)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {trialEndDate ? (
+                            <div className={`text-sm ${isTrialExpired ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                              {format(trialEndDate, 'd MMM', { locale: tr })}
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm space-y-1">
+                            {lastSignIn ? (
+                              <div className="text-gray-600">
+                                Son Giriş: {formatDistanceToNow(lastSignIn, { addSuffix: true, locale: tr })}
+                              </div>
+                            ) : (
+                              <div className="text-gray-400">Hiç giriş yapmamış</div>
+                            )}
+                            <div className="flex items-center gap-3 text-xs text-gray-500">
+                              <span>👥 {user.client_count || 0}</span>
+                              <span>📅 {user.appointment_count || 0}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                            {user.phone && (
+                              <button
+                                onClick={(e) => handleWhatsAppClick(user.phone, e)}
+                                className="inline-flex items-center justify-center w-9 h-9 bg-[#25D366] text-white rounded-lg hover:bg-[#20BA5A] transition-colors"
+                                title="WhatsApp ile İletişim"
+                              >
+                                <MessageCircle className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setActiveDropdown(
-                                  activeDropdown === user.id ? null : user.id
-                                )
+                              onClick={() => {
+                                setSelectedUser(user)
+                                setIsInspectorOpen(true)
                               }}
-                              className="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors"
-                              title="Abonelik İşlemleri"
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                              title="Detayları Görüntüle/Düzenle"
                             >
-                              <MoreVertical className="w-3 h-3" />
+                              <Edit className="w-3 h-3 mr-1" />
+                              Düzenle
+                            </button>
+                            <button
+                              onClick={() => handleToggleAdmin(user.id, user.is_admin || false)}
+                              className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                                user.is_admin
+                                  ? 'bg-yellow-600 text-white hover:bg-yellow-700'
+                                  : 'bg-purple-600 text-white hover:bg-purple-700'
+                              }`}
+                              title={user.is_admin ? 'Admin Yetkisini Kaldır' : 'Admin Yap'}
+                            >
+                              <UserCog className="w-3 h-3 mr-1" />
+                              {user.is_admin ? 'Admin Kaldır' : 'Admin Yap'}
                             </button>
 
-                            {activeDropdown === user.id && (
-                              <div
-                                className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
-                                onClick={(e) => e.stopPropagation()}
+                            {/* Subscription Actions Dropdown */}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setActiveDropdown(
+                                    activeDropdown === user.id ? null : user.id
+                                  )
+                                }}
+                                className="inline-flex items-center px-3 py-1.5 bg-gray-600 text-white text-xs font-medium rounded hover:bg-gray-700 transition-colors"
+                                title="Abonelik İşlemleri"
                               >
-                                <div className="py-1">
-                                  <button
-                                    onClick={() => updateSubscription(user.id, 1)}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                  >
-                                    <CalendarPlus className="w-4 h-4" />
-                                    <span>+1 Ay Ekle</span>
-                                  </button>
-                                  <button
-                                    onClick={() => updateSubscription(user.id, 12)}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                  >
-                                    <CalendarPlus className="w-4 h-4" />
-                                    <span>+1 Yıl Ekle</span>
-                                  </button>
-                                  <button
-                                    onClick={() => updateSubscription(user.id, -1)}
-                                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                                  >
-                                    <CalendarMinus className="w-4 h-4" />
-                                    <span>-1 Ay Düşür</span>
-                                  </button>
-                                  <div className="border-t border-gray-200 my-1"></div>
-                                  <button
-                                    onClick={() => handleExpireSubscription(user.id)}
-                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                    <span>Süresiz Kapat</span>
-                                  </button>
+                                <MoreVertical className="w-3 h-3" />
+                              </button>
+
+                              {activeDropdown === user.id && (
+                                <div
+                                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="py-1">
+                                    <button
+                                      onClick={() => updateSubscription(user.id, 1)}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                                    >
+                                      <CalendarPlus className="w-4 h-4" />
+                                      <span>+1 Ay Ekle</span>
+                                    </button>
+                                    <button
+                                      onClick={() => updateSubscription(user.id, 12)}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                                    >
+                                      <CalendarPlus className="w-4 h-4" />
+                                      <span>+1 Yıl Ekle</span>
+                                    </button>
+                                    <button
+                                      onClick={() => updateSubscription(user.id, -1)}
+                                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                                    >
+                                      <CalendarMinus className="w-4 h-4" />
+                                      <span>-1 Ay Düşür</span>
+                                    </button>
+                                    <div className="border-t border-gray-200 my-1"></div>
+                                    <button
+                                      onClick={() => handleExpireSubscription(user.id)}
+                                      className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                      <span>Süresiz Kapat</span>
+                                    </button>
+                                  </div>
                                 </div>
-                              </div>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
