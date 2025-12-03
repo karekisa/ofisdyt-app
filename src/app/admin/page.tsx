@@ -18,7 +18,11 @@ import {
   MoreVertical,
   X,
   HelpCircle,
+  Edit,
+  MessageSquare,
 } from 'lucide-react'
+import UserInspectorModal from './UserInspectorModal'
+import AnnouncementManager from './AnnouncementManager'
 import { format, addMonths, subMonths } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -27,6 +31,8 @@ type UserWithEmail = {
   full_name: string | null
   email: string | null
   clinic_name: string | null
+  phone: string | null
+  public_slug: string | null
   is_admin: boolean | null
   subscription_status: 'active' | 'expired' | 'suspended' | null
   subscription_ends_at: string | null
@@ -40,10 +46,13 @@ export default function AdminPage() {
     totalUsers: 0,
     activeSubscriptions: 0,
     totalAppointments: 0,
+    totalSmsSent: 0,
   })
   const [users, setUsers] = useState<UserWithEmail[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null)
+  const [isInspectorOpen, setIsInspectorOpen] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -100,7 +109,7 @@ export default function AdminPage() {
     // Load from admin_users_view (includes email)
     const { data: profiles, error } = await supabase
       .from('admin_users_view')
-      .select('id, full_name, email, clinic_name, is_admin, subscription_status, subscription_ends_at, created_at')
+      .select('id, full_name, email, clinic_name, phone, public_slug, is_admin, subscription_status, subscription_ends_at, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -127,6 +136,7 @@ export default function AdminPage() {
         totalUsers: nonAdminProfiles.length,
         activeSubscriptions: activeSubs,
         totalAppointments: 0,
+        totalSmsSent: 0,
       })
 
       setUsers(profiles as UserWithEmail[])
@@ -143,6 +153,22 @@ export default function AdminPage() {
         totalAppointments: appointmentsCount,
       }))
     }
+
+    // Calculate SMS usage (confirmed appointments + verifications)
+    // This is a rough estimate: count confirmed/completed appointments
+    const { count: confirmedAppointments } = await supabase
+      .from('appointments')
+      .select('*', { count: 'exact', head: true })
+      .in('status', ['confirmed', 'completed'])
+
+    // Rough estimate: each confirmed appointment = 1 SMS (confirmation)
+    // We can add more sophisticated tracking later
+    const smsEstimate = confirmedAppointments || 0
+
+    setStats((prev) => ({
+      ...prev,
+      totalSmsSent: smsEstimate,
+    }))
 
     setLoading(false)
   }
@@ -316,7 +342,7 @@ export default function AdminPage() {
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
@@ -355,6 +381,21 @@ export default function AdminPage() {
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Calendar className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Tahmini SMS Gönderimi</p>
+                <p className="text-3xl font-bold text-gray-900 mt-2">
+                  {stats.totalSmsSent}
+                </p>
+                <p className="text-xs text-gray-500 mt-1">Onaylı randevular</p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <MessageSquare className="w-6 h-6 text-purple-600" />
               </div>
             </div>
           </div>
@@ -420,7 +461,14 @@ export default function AdminPage() {
                   </tr>
                 ) : (
                   filteredUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
+                    <tr
+                      key={user.id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => {
+                        setSelectedUser(user)
+                        setIsInspectorOpen(true)
+                      }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div>
@@ -455,7 +503,18 @@ export default function AdminPage() {
                           : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => {
+                              setSelectedUser(user)
+                              setIsInspectorOpen(true)
+                            }}
+                            className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors bg-blue-600 text-white hover:bg-blue-700"
+                            title="Detayları Görüntüle/Düzenle"
+                          >
+                            <Edit className="w-3 h-3 mr-1" />
+                            Düzenle
+                          </button>
                           <button
                             onClick={() => handleToggleAdmin(user.id, user.is_admin || false)}
                             className={`inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors ${
@@ -532,7 +591,26 @@ export default function AdminPage() {
             </table>
           </div>
         </div>
+
+        {/* Announcement Manager */}
+        <div className="mt-6">
+          <AnnouncementManager />
+        </div>
       </div>
+
+      {/* User Inspector Modal */}
+      <UserInspectorModal
+        user={selectedUser}
+        isOpen={isInspectorOpen}
+        onClose={() => {
+          setIsInspectorOpen(false)
+          setSelectedUser(null)
+        }}
+        onSuccess={() => {
+          loadData()
+          router.refresh()
+        }}
+      />
     </div>
   )
 }

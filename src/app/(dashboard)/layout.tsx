@@ -9,6 +9,7 @@ import { Menu, LayoutDashboard, Users, Calendar, Wallet, Settings, HelpCircle } 
 import Sidebar from '@/components/Sidebar'
 import TrialBanner from '@/components/TrialBanner'
 import QuickSearch from '@/components/QuickSearch'
+import AnnouncementBanner from '@/components/AnnouncementBanner'
 
 export default function DashboardLayout({
   children,
@@ -107,6 +108,9 @@ export default function DashboardLayout({
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3">
           <QuickSearch />
         </div>
+
+        {/* Global Announcement Banner */}
+        <AnnouncementBanner />
 
         {/* Trial Banner */}
         {profile && (

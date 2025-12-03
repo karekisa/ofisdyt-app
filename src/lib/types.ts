@@ -107,3 +107,12 @@ export interface DietList {
   content: string;
   created_at: string;
 }
+
+export interface SystemAnnouncement {
+  id: string;
+  message: string;
+  type: 'info' | 'warning';
+  is_active: boolean;
+  created_at: string;
+  created_by: string | null;
+}
