@@ -32,13 +32,21 @@ export default function EditAppointmentDialog({
   const [deleting, setDeleting] = useState(false)
   const [clients, setClients] = useState<Client[]>([])
   const [loadingClients, setLoadingClients] = useState(true)
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    client_id: string
+    guest_name: string
+    guest_phone: string
+    date: string
+    time: string
+    status: Appointment['status']
+    notes: string
+  }>({
     client_id: '',
     guest_name: '',
     guest_phone: '',
     date: '',
     time: '',
-    status: 'approved' as 'pending' | 'approved' | 'rejected' | 'completed',
+    status: 'confirmed',
     notes: '',
   })
 
@@ -254,7 +262,7 @@ export default function EditAppointmentDialog({
             <Select
               value={formData.status}
               onValueChange={(value) =>
-                setFormData({ ...formData, status: value as 'pending' | 'approved' | 'rejected' | 'completed' })
+                setFormData({ ...formData, status: value as Appointment['status'] })
               }
             >
               <SelectTrigger className="w-full text-base">
@@ -262,7 +270,7 @@ export default function EditAppointmentDialog({
               </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">{appointmentStatusMap.pending}</SelectItem>
-                    <SelectItem value="approved">{appointmentStatusMap.approved}</SelectItem>
+                    <SelectItem value="confirmed">{appointmentStatusMap.confirmed}</SelectItem>
                     <SelectItem value="rejected">{appointmentStatusMap.rejected}</SelectItem>
                     <SelectItem value="completed">{appointmentStatusMap.completed}</SelectItem>
                     <SelectItem value="cancelled">{appointmentStatusMap.cancelled}</SelectItem>

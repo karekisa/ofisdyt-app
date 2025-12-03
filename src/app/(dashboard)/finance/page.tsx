@@ -449,7 +449,7 @@ export default function FinancePage() {
                           })}
                         </span>
                         <span>•</span>
-                        <span>{getPaymentMethodLabel(transaction.payment_method)}</span>
+                        <span>{getPaymentMethodLabel(transaction.payment_method || 'other')}</span>
                         {transaction.clients?.name && (
                           <>
                             <span>•</span>

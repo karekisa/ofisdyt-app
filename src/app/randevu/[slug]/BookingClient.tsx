@@ -114,10 +114,13 @@ export default function BookingClient({ slug }: BookingClientProps) {
 
   const timeSlots = useMemo(() => {
     if (!profile) return []
+    // Parse string hours to integers (handle both "9" and "09:00" formats)
+    const startHour = parseInt(profile.work_start_hour?.split(':')[0] || '9', 10)
+    const endHour = parseInt(profile.work_end_hour?.split(':')[0] || '17', 10)
     // Fixed 30-minute session duration globally
     return generateTimeSlotsFromHours(
-      profile.work_start_hour || 9,
-      profile.work_end_hour || 17,
+      startHour,
+      endHour,
       30 // Fixed to 30 minutes
     )
   }, [profile])

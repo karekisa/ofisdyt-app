@@ -108,6 +108,21 @@ export default function SettingsPage() {
         return
       }
 
+      // Check if slug is already taken by another user
+      if (sanitizedSlug) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('public_slug', sanitizedSlug)
+          .neq('id', profile.id) // Exclude current user
+          .maybeSingle()
+
+        if (existingUser) {
+          toast.error('Bu randevu linki (slug) başkası tarafından kullanılıyor. Lütfen başka bir isim seçin.')
+          return // STOP EXECUTION
+        }
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({
@@ -284,8 +299,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Mesai Başlangıç</Label>
                   <Select 
-                    value={profile.work_start_hour?.toString() || '9'} 
-                    onValueChange={(val) => setProfile({ ...profile, work_start_hour: parseInt(val) || 9 })}
+                    value={profile.work_start_hour || '9'} 
+                    onValueChange={(val) => setProfile({ ...profile, work_start_hour: val })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -301,8 +316,8 @@ export default function SettingsPage() {
                 <div className="space-y-2">
                   <Label>Mesai Bitiş</Label>
                   <Select 
-                    value={profile.work_end_hour?.toString() || '18'} 
-                    onValueChange={(val) => setProfile({ ...profile, work_end_hour: parseInt(val) || 18 })}
+                    value={profile.work_end_hour || '18'} 
+                    onValueChange={(val) => setProfile({ ...profile, work_end_hour: val })}
                   >
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
