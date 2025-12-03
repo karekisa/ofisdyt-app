@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { Calendar, Clock, Link as LinkIcon, Copy, Check, ExternalLink, Share2, AlertCircle, User, FileText, ArrowRight } from 'lucide-react'
+import { Calendar, Clock, Link as LinkIcon, Copy, Check, ExternalLink, Share2, AlertCircle, User, FileText, ArrowRight, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { format, parseISO } from 'date-fns'
 import { tr } from 'date-fns/locale'
 import { Appointment } from '@/lib/types'
 import { toast } from 'sonner'
+import { formatPhoneForWhatsapp } from '@/lib/utils'
 
 export default function DashboardPage() {
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>(
@@ -70,14 +71,15 @@ export default function DashboardPage() {
       .lte('start_time', todayEnd.toISOString())
       .order('start_time', { ascending: true })
 
-    // Get pending appointments
+    // Get pending appointments (include phone for WhatsApp)
     const { data: pending } = await supabase
       .from('appointments')
       .select(
         `
         *,
         clients:client_id (
-          name
+          name,
+          phone
         )
       `
       )
@@ -102,6 +104,37 @@ export default function DashboardPage() {
     if (!error) {
       loadData()
     }
+  }
+
+  const handleSendWhatsAppMessage = (appointment: Appointment) => {
+    // Get phone number from either client or guest
+    const phone = appointment.clients?.phone || appointment.guest_phone
+    
+    if (!phone) {
+      toast.error('Telefon numarası bulunamadı.')
+      return
+    }
+
+    // Format phone for WhatsApp
+    const formattedPhone = formatPhoneForWhatsapp(phone)
+    if (!formattedPhone) {
+      toast.error('Geçersiz telefon numarası.')
+      return
+    }
+
+    // Get client name
+    const clientName = appointment.clients?.name || appointment.guest_name || 'Sayın Danışan'
+    
+    // Format date and time
+    const appointmentDate = format(parseISO(appointment.start_time), 'd MMMM yyyy', { locale: tr })
+    const appointmentTime = format(parseISO(appointment.start_time), 'HH:mm', { locale: tr })
+
+    // Generate message template
+    const message = `Merhaba ${clientName}, ${appointmentDate} ${appointmentTime} tarihli randevu talebiniz hakkında yazıyorum...`
+    
+    // Open WhatsApp
+    const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`
+    window.open(whatsappUrl, '_blank')
   }
 
   if (loading) {
@@ -170,14 +203,15 @@ export default function DashboardPage() {
                         )}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex items-center space-x-2">
+                      {/* WhatsApp Message Button */}
                       <button
-                        onClick={() =>
-                          handleAppointmentAction(appointment.id, 'approved')
-                        }
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors active:scale-95 font-medium"
+                        onClick={() => handleSendWhatsAppMessage(appointment)}
+                        disabled={!appointment.clients?.phone && !appointment.guest_phone}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="WhatsApp ile Mesaj At"
                       >
-                        Onayla
+                        <MessageCircle className="w-5 h-5" />
                       </button>
                       <button
                         onClick={() =>
@@ -186,6 +220,14 @@ export default function DashboardPage() {
                         className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors active:scale-95 font-medium"
                       >
                         Reddet
+                      </button>
+                      <button
+                        onClick={() =>
+                          handleAppointmentAction(appointment.id, 'approved')
+                        }
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors active:scale-95 font-medium"
+                      >
+                        Onayla
                       </button>
                     </div>
                   </div>
