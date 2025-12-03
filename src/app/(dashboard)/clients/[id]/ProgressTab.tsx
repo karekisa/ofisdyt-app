@@ -220,32 +220,34 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Vücut Kompozisyonu</h3>
           <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
             <div className="flex flex-col md:flex-row items-center justify-center gap-8">
-              <ResponsiveContainer width="100%" height={300} maxWidth={300}>
-                <PieChart>
-                  <Pie
-                    data={bodyComposition}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {bodyComposition.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value: number) => `${value}%`}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e5e7eb',
-                      borderRadius: '8px',
-                      padding: '8px',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
+              <div className="w-full max-w-[300px] h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={bodyComposition}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={100}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {bodyComposition.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value: number) => `${value}%`}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        padding: '8px',
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
               <div className="space-y-4">
                 <div className="text-center md:text-left">
                   {bmi && (
