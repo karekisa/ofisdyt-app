@@ -13,8 +13,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { format, parseISO } from 'date-fns'
+import { format, parseISO, differenceInDays } from 'date-fns'
 import { tr } from 'date-fns/locale'
+import { Instagram } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
+import { toPng } from 'html-to-image'
+import downloadjs from 'downloadjs'
 
 type Measurement = {
   id: string
@@ -83,14 +88,63 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
     const weightChange = lastWeight - firstWeight
     const weightChangePercent = firstWeight > 0 ? (weightChange / firstWeight) * 100 : 0
 
+    // Calculate date range
+    const firstDate = measurements[0]?.date ? parseISO(measurements[0].date) : null
+    const lastDate = measurements[measurements.length - 1]?.date ? parseISO(measurements[measurements.length - 1].date) : null
+    const daysDiff = firstDate && lastDate ? differenceInDays(lastDate, firstDate) : 0
+
     return {
       firstWeight,
       lastWeight,
       weightChange,
       weightChangePercent,
       totalMeasurements: measurements.length,
+      firstDate,
+      lastDate,
+      daysDiff,
     }
   }, [measurements])
+
+  // Mask client name for privacy (show only first name + first letter of last name)
+  const getMaskedName = (fullName: string) => {
+    const parts = fullName.trim().split(' ')
+    if (parts.length === 1) return parts[0]
+    const firstName = parts[0]
+    const lastNameInitial = parts[parts.length - 1][0]?.toUpperCase() || ''
+    return `${firstName} ${lastNameInitial}.`
+  }
+
+  const handleGenerateSuccessCard = async () => {
+    if (!stats || stats.weightChange >= 0) {
+      toast.error('Başarı kartı için kilo kaybı gereklidir.')
+      return
+    }
+
+    const cardElement = document.getElementById('success-card-container')
+    if (!cardElement) {
+      toast.error('Kart oluşturulamadı. Sayfayı yenileyin.')
+      return
+    }
+
+    toast.loading('Başarı kartı hazırlanıyor...', { id: 'generating-card' })
+
+    try {
+      const dataUrl = await toPng(cardElement, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        width: 1080,
+        height: 1920,
+      })
+
+      downloadjs(dataUrl, `diyetlik-basari-karti-${client.name.replace(/\s+/g, '-')}.png`, 'image/png')
+      
+      toast.success('Başarı kartı indirildi!', { id: 'generating-card' })
+    } catch (error) {
+      console.error('Error generating card:', error)
+      toast.error('Kart oluşturulurken bir hata oluştu.', { id: 'generating-card' })
+    }
+  }
 
   if (loading) {
     return (
@@ -126,6 +180,210 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Success Card Generator Button */}
+      {stats && stats.weightChange < 0 && (
+        <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-lg p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-bold mb-2">Başarı Hikayenizi Paylaşın! 📸</h3>
+              <p className="text-white/90">
+                Instagram'da paylaşmak için profesyonel bir başarı kartı oluşturun
+              </p>
+            </div>
+            <Button
+              onClick={handleGenerateSuccessCard}
+              className="bg-white text-purple-600 hover:bg-gray-100 font-semibold px-6 py-3 flex items-center gap-2"
+            >
+              <Instagram className="w-5 h-5" />
+              Başarı Kartı Oluştur
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden Success Card Container */}
+      {stats && stats.weightChange < 0 && (
+        <div
+          id="success-card-container"
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            zIndex: -9999,
+            pointerEvents: 'none',
+            width: '1080px',
+            height: '1920px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '80px 60px',
+            boxSizing: 'border-box',
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+            color: '#ffffff',
+            backgroundColor: '#667eea',
+          }}
+        >
+          {/* Header */}
+          <div style={{ textAlign: 'center', width: '100%' }}>
+            <div
+              style={{
+                fontSize: '24px',
+                fontWeight: 600,
+                letterSpacing: '2px',
+                opacity: 0.9,
+                marginBottom: '40px',
+              }}
+            >
+              DİYETLİK BAŞARI HİKAYESİ
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div
+            style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              width: '100%',
+            }}
+          >
+            {/* Client Name */}
+            <div
+              style={{
+                fontSize: '64px',
+                fontWeight: 700,
+                marginBottom: '60px',
+                textShadow: '0 4px 20px rgba(0,0,0,0.3)',
+              }}
+            >
+              {getMaskedName(client.name)}
+            </div>
+
+            {/* Hero Stat - Weight Loss */}
+            <div
+              style={{
+                fontSize: '180px',
+                fontWeight: 900,
+                lineHeight: 1,
+                marginBottom: '40px',
+                textShadow: '0 6px 30px rgba(0,0,0,0.4)',
+                background: 'linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }}
+            >
+              {Math.abs(stats.weightChange).toFixed(1)}
+            </div>
+            <div
+              style={{
+                fontSize: '48px',
+                fontWeight: 600,
+                marginBottom: '60px',
+                opacity: 0.95,
+              }}
+            >
+              KİLO VERDİ
+            </div>
+
+            {/* Sub Stats */}
+            <div
+              style={{
+                display: 'flex',
+                gap: '30px',
+                marginTop: '40px',
+              }}
+            >
+              {stats.daysDiff > 0 && (
+                <div
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    backdropFilter: 'blur(10px)',
+                    borderRadius: '20px',
+                    padding: '20px 40px',
+                    fontSize: '28px',
+                    fontWeight: 600,
+                  }}
+                >
+                  {stats.daysDiff} GÜNDE
+                </div>
+              )}
+              <div
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '20px',
+                  padding: '20px 40px',
+                  fontSize: '28px',
+                  fontWeight: 600,
+                }}
+              >
+                {stats.totalMeasurements} ÖLÇÜM
+              </div>
+            </div>
+
+            {/* Progress Percentage */}
+            {stats.weightChangePercent < 0 && (
+              <div
+                style={{
+                  marginTop: '40px',
+                  fontSize: '36px',
+                  fontWeight: 600,
+                  opacity: 0.9,
+                }}
+              >
+                %{Math.abs(stats.weightChangePercent).toFixed(1)} Değişim
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div
+            style={{
+              width: '100%',
+              textAlign: 'center',
+              paddingTop: '40px',
+              borderTop: '2px solid rgba(255, 255, 255, 0.3)',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '20px',
+                fontWeight: 600,
+                marginBottom: '10px',
+                letterSpacing: '1px',
+              }}
+            >
+              DİYETLİK
+            </div>
+            <div
+              style={{
+                fontSize: '16px',
+                opacity: 0.8,
+                letterSpacing: '0.5px',
+              }}
+            >
+              Diyetlik altyapısı ile oluşturulmuştur
+            </div>
+            <div
+              style={{
+                fontSize: '18px',
+                fontWeight: 500,
+                marginTop: '8px',
+                opacity: 0.9,
+              }}
+            >
+              www.diyetlik.com.tr
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
