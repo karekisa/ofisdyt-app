@@ -6,31 +6,89 @@ import { MessageSquare, Calendar, TrendingUp, Check, ArrowRight } from 'lucide-r
 import { Button } from '@/components/ui/button'
 
 export default function LandingPage() {
-  const structuredData = {
+  // SoftwareApplication Schema
+  const softwareApplicationSchema = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Diyetlik",
     "applicationCategory": "HealthApplication",
     "operatingSystem": "Web",
-    "offers": {
-      "@type": "Offer",
-      "price": "499",
-      "priceCurrency": "TRY",
-      "priceValidUntil": "2025-12-31",
-      "availability": "https://schema.org/InStock"
-    },
+    "url": "https://diyetlik.com.tr",
+    "logo": "https://diyetlik.com.tr/logo.png",
+    "description": "Diyetisyenlerin işini %80 hızlandıran yerli sistem. Tek tıkla WhatsApp diyet gönderimi, otomatik randevu takibi ve finansal yönetim. Ücretsiz 15 gün deneyin.",
+    "offers": [
+      {
+        "@type": "Offer",
+        "name": "Aylık Paket",
+        "price": "499",
+        "priceCurrency": "TRY",
+        "priceValidUntil": "2025-12-31",
+        "availability": "https://schema.org/InStock",
+        "billingIncrement": "P1M",
+        "category": "subscription"
+      },
+      {
+        "@type": "Offer",
+        "name": "Yıllık Paket",
+        "price": "4999",
+        "priceCurrency": "TRY",
+        "priceValidUntil": "2025-12-31",
+        "availability": "https://schema.org/InStock",
+        "billingIncrement": "P1Y",
+        "category": "subscription"
+      }
+    ],
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.8",
-      "ratingCount": "150"
+      "ratingCount": "150",
+      "bestRating": "5",
+      "worstRating": "1"
     },
-    "description": "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
     "featureList": [
       "WhatsApp Entegrasyonu",
       "Akıllı Randevu Yönetimi",
       "Gelişim Takibi",
       "Finansal Takip",
-      "Danışan Yönetimi"
+      "Danışan Yönetimi",
+      "Diyet Şablonları",
+      "Otomatik Hatırlatmalar",
+      "Raporlama ve Analiz"
+    ],
+    "screenshot": "https://diyetlik.com.tr/logo.png",
+    "softwareVersion": "1.0",
+    "releaseNotes": "Diyetisyenler için kapsamlı klinik yönetim yazılımı"
+  }
+
+  // Organization Schema
+  const organizationSchema = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Diyetlik",
+    "url": "https://diyetlik.com.tr",
+    "logo": "https://diyetlik.com.tr/logo.png",
+    "description": "Diyetisyenler için online randevu ve klinik yönetim yazılımı. Diyetisyenlerin işini %80 hızlandıran yerli sistem.",
+    "sameAs": [
+      // Add social media links when available
+      // "https://www.facebook.com/diyetlik",
+      // "https://www.twitter.com/diyetlik",
+      // "https://www.linkedin.com/company/diyetlik"
+    ],
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "contactType": "customer service",
+      "availableLanguage": ["Turkish", "tr"]
+    },
+    "areaServed": {
+      "@type": "Country",
+      "name": "Turkey"
+    },
+    "knowsAbout": [
+      "Diyetisyen Yazılımı",
+      "Klinik Yönetim",
+      "Online Randevu Sistemi",
+      "Diyet Takip Programı",
+      "WhatsApp Entegrasyon"
     ]
   }
 
@@ -38,7 +96,11 @@ export default function LandingPage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }}
       />
       <div className="min-h-screen bg-white">
       {/* Header/Navbar */}

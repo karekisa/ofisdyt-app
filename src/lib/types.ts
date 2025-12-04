@@ -41,6 +41,7 @@ export interface Client {
   height: number | null;
   gender: string | null;
   notes: string | null;
+  target_weight: number | null;
   created_at: string;
 }
 

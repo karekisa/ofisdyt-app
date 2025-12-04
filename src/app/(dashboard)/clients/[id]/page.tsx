@@ -11,6 +11,91 @@ import { Client } from '@/lib/types'
 import { formatPhoneForWhatsapp } from '@/lib/utils'
 import { toast } from 'sonner'
 
+// BMI Goal Meter Component
+function BMIGoalMeter({ bmi }: { bmi: number }) {
+  const minBMI = 16
+  const maxBMI = 35
+  const normalMin = 18.5
+  const normalMax = 24.9
+  const overweightMin = 25
+  const obeseMin = 30
+
+  // Calculate positions as percentages
+  const currentPosition = ((bmi - minBMI) / (maxBMI - minBMI)) * 100
+  const normalStart = ((normalMin - minBMI) / (maxBMI - minBMI)) * 100
+  const normalEnd = ((normalMax - minBMI) / (maxBMI - minBMI)) * 100
+  const overweightStart = ((overweightMin - minBMI) / (maxBMI - minBMI)) * 100
+  const obeseStart = ((obeseMin - minBMI) / (maxBMI - minBMI)) * 100
+
+  // Determine BMI category
+  const getBMICategory = () => {
+    if (bmi < 18.5) return { label: 'Zayıf', color: 'bg-blue-500' }
+    if (bmi < 25) return { label: 'Normal', color: 'bg-green-500' }
+    if (bmi < 30) return { label: 'Fazla Kilolu', color: 'bg-yellow-500' }
+    return { label: 'Obez', color: 'bg-red-500' }
+  }
+
+  const category = getBMICategory()
+
+  return (
+    <div className="space-y-2">
+      {/* BMI Bar */}
+      <div className="relative h-8 bg-gray-200 rounded-full overflow-hidden">
+        {/* Underweight zone (16-18.5) */}
+        <div
+          className="absolute h-full bg-blue-300"
+          style={{ left: '0%', width: `${normalStart}%` }}
+        />
+        {/* Normal zone (18.5-24.9) */}
+        <div
+          className="absolute h-full bg-green-500"
+          style={{ left: `${normalStart}%`, width: `${normalEnd - normalStart}%` }}
+        />
+        {/* Overweight zone (25-29.9) */}
+        <div
+          className="absolute h-full bg-yellow-500"
+          style={{ left: `${overweightStart}%`, width: `${obeseStart - overweightStart}%` }}
+        />
+        {/* Obese zone (30-35) */}
+        <div
+          className="absolute h-full bg-red-500"
+          style={{ left: `${obeseStart}%`, width: `${100 - obeseStart}%` }}
+        />
+        
+        {/* Current BMI Indicator */}
+        <div
+          className="absolute top-0 h-full w-1 bg-gray-900 z-10"
+          style={{ left: `${Math.min(100, Math.max(0, currentPosition))}%`, transform: 'translateX(-50%)' }}
+        >
+          <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+            <div className="bg-gray-900 text-white text-xs px-2 py-1 rounded font-semibold">
+              {bmi.toFixed(1)}
+            </div>
+            <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-1 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+          </div>
+        </div>
+      </div>
+
+      {/* Labels */}
+      <div className="flex justify-between text-xs text-gray-600">
+        <span>16</span>
+        <span className="text-green-600 font-semibold">18.5</span>
+        <span className="text-yellow-600 font-semibold">25</span>
+        <span className="text-red-600 font-semibold">30</span>
+        <span>35</span>
+      </div>
+
+      {/* Category Badge */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-gray-600">Durum:</span>
+        <span className={`px-3 py-1 rounded-full text-sm font-semibold text-white ${category.color}`}>
+          {category.label}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export default function ClientDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -21,11 +106,9 @@ export default function ClientDetailPage() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [stats, setStats] = useState<{
     bmi: number | null
-    bmr: number | null
     idealWeight: number | null
   }>({
     bmi: null,
-    bmr: null,
     idealWeight: null,
   })
 
@@ -60,7 +143,7 @@ export default function ClientDetailPage() {
       setClient(clientData as Client)
     }
 
-    // Calculate BMI/BMR/Ideal Weight
+    // Calculate BMI/Ideal Weight
     if (clientData) {
       calculateStats(clientData as Client)
     } else {
@@ -69,7 +152,7 @@ export default function ClientDetailPage() {
   }
 
   const calculateStats = async (clientData: Client) => {
-    if (!clientData.height || !clientData.age || !clientData.gender) {
+    if (!clientData.height) {
       setLoading(false)
       return
     }
@@ -90,18 +173,10 @@ export default function ClientDetailPage() {
       const heightInMeters = clientData.height / 100
       const bmi = weight / (heightInMeters * heightInMeters)
 
-      // BMR calculation (Mifflin-St Jeor Equation)
-      let bmr: number | null = null
-      if (clientData.gender === 'male') {
-        bmr = 10 * weight + 6.25 * clientData.height - 5 * clientData.age + 5
-      } else if (clientData.gender === 'female') {
-        bmr = 10 * weight + 6.25 * clientData.height - 5 * clientData.age - 161
-      }
-
       // Ideal Weight (BMI 22)
       const idealWeight = 22 * heightInMeters * heightInMeters
 
-      setStats({ bmi, bmr, idealWeight })
+      setStats({ bmi, idealWeight })
     }
 
     setLoading(false)
@@ -209,27 +284,29 @@ export default function ClientDetailPage() {
           )}
         </div>
 
-        {/* BMI/BMR Stats */}
-        {(stats.bmi !== null || stats.bmr !== null || stats.idealWeight !== null) && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-gray-200">
-            {stats.bmi !== null && (
+        {/* BMI Stats with Goal Meter */}
+        {stats.bmi !== null && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
-                <p className="text-sm text-gray-500">BMI</p>
+                <p className="text-sm text-gray-500">VKİ (BMI)</p>
                 <p className="text-gray-900 font-medium text-lg">{stats.bmi.toFixed(1)}</p>
               </div>
-            )}
-            {stats.bmr !== null && (
-              <div>
-                <p className="text-sm text-gray-500">BMR (kcal/gün)</p>
-                <p className="text-gray-900 font-medium text-lg">{Math.round(stats.bmr)}</p>
-              </div>
-            )}
-            {stats.idealWeight !== null && (
-              <div>
-                <p className="text-sm text-gray-500">İdeal Kilo</p>
-                <p className="text-gray-900 font-medium text-lg">{stats.idealWeight.toFixed(1)} kg</p>
-              </div>
-            )}
+              {(client.target_weight !== null || stats.idealWeight !== null) && (
+                <div>
+                  <p className="text-sm text-gray-500">Hedef Kilo</p>
+                  <p className="text-gray-900 font-medium text-lg">
+                    {(client.target_weight ?? stats.idealWeight)?.toFixed(1)} kg
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* BMI Goal Meter */}
+            <div className="mt-4">
+              <p className="text-sm text-gray-500 mb-2">VKİ Durumu</p>
+              <BMIGoalMeter bmi={stats.bmi} />
+            </div>
           </div>
         )}
       </div>

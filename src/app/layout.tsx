@@ -16,14 +16,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://diyetlik.com.tr'),
   title: {
-    default: "Diyetlik | Diyetisyen Asistanı",
+    default: "Diyetlik | Diyetisyenler İçin Online Randevu ve Klinik Yönetim Yazılımı",
     template: "%s | Diyetlik",
   },
-  description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
-  keywords: ["diyetisyen yazılımı", "klinik yönetim", "online randevu", "diyet takip programı", "ofisdyt", "diyetlik", "diyetisyen asistanı", "randevu yönetimi"],
+  description: "Diyetisyenlerin işini %80 hızlandıran yerli sistem. Tek tıkla WhatsApp diyet gönderimi, otomatik randevu takibi ve finansal yönetim. Ücretsiz 15 gün deneyin.",
+  keywords: ["Diyetisyen Yazılımı", "Klinik Yönetim", "Online Randevu Sistemi", "Diyet Takip Programı", "Diyetlik", "WhatsApp Entegrasyon", "diyetisyen yazılımı", "klinik yönetim", "online randevu", "diyet takip programı", "diyetisyen asistanı", "randevu yönetimi"],
   authors: [{ name: "Diyetlik" }],
   creator: "Diyetlik",
   publisher: "Diyetlik",
+  alternates: {
+    canonical: "https://diyetlik.com.tr",
+  },
   formatDetection: {
     email: false,
     address: false,
@@ -32,23 +35,23 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "tr_TR",
-    url: "https://diyetlik.com",
+    url: "https://diyetlik.com.tr",
     siteName: "Diyetlik",
-    title: "Diyetlik | Diyetisyen Asistanı",
-    description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı. WhatsApp ile diyet listesi gönderin, randevularınızı otomatikleştirin.",
+    title: "Diyetlik | Diyetisyenler İçin Online Randevu ve Klinik Yönetim Yazılımı",
+    description: "Diyetisyenlerin işini %80 hızlandıran yerli sistem. Tek tıkla WhatsApp diyet gönderimi, otomatik randevu takibi ve finansal yönetim. Ücretsiz 15 gün deneyin.",
     images: [
       {
         url: "/logo.png",
         width: 1200,
         height: 630,
-        alt: "Diyetlik Logo",
+        alt: "Diyetlik - Diyetisyenler İçin Online Randevu ve Klinik Yönetim Yazılımı",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Diyetlik | Diyetisyen Asistanı",
-    description: "Diyetisyenler için en hızlı randevu ve klinik yönetim yazılımı.",
+    title: "Diyetlik | Diyetisyenler İçin Online Randevu ve Klinik Yönetim Yazılımı",
+    description: "Diyetisyenlerin işini %80 hızlandıran yerli sistem. Tek tıkla WhatsApp diyet gönderimi, otomatik randevu takibi ve finansal yönetim.",
     images: ["/logo.png"],
   },
   robots: {
@@ -63,8 +66,7 @@ export const metadata: Metadata = {
     },
   },
   verification: {
-    // Add your verification codes here when available
-    // google: 'your-google-verification-code',
+    google: "VJdGaRIAPwQLdTfEdMCht2fRXEEBNw6e-uwKu7Pz0sU",
     // yandex: 'your-yandex-verification-code',
   },
 };

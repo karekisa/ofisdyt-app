@@ -24,6 +24,7 @@ export default function EditClientDialog({
     height: client.height?.toString() || '',
     gender: client.gender || '',
     notes: client.notes || '',
+    target_weight: client.target_weight?.toString() || '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,6 +40,7 @@ export default function EditClientDialog({
         height: formData.height ? parseFloat(formData.height) : null,
         gender: formData.gender || null,
         notes: formData.notes || null,
+        target_weight: formData.target_weight ? parseFloat(formData.target_weight) : null,
       })
       .eq('id', client.id)
 
@@ -129,6 +131,26 @@ export default function EditClientDialog({
                 placeholder="Boy (cm)"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Hedef Kilo (kg)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.1"
+              value={formData.target_weight}
+              onChange={(e) =>
+                setFormData({ ...formData, target_weight: e.target.value })
+              }
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+              placeholder="Hedef Kilo (kg)"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Danışanın hedeflediği kilo hedefi
+            </p>
           </div>
 
           <div>

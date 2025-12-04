@@ -18,11 +18,10 @@ import {
 } from 'recharts'
 import { format, parseISO, differenceInDays } from 'date-fns'
 import { tr } from 'date-fns/locale'
-import { Instagram, ArrowUp, ArrowDown, Printer, ThumbsUp, AlertTriangle, TrendingDown } from 'lucide-react'
+import { ArrowUp, ArrowDown, Download, ThumbsUp, AlertTriangle, TrendingDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { toast } from 'sonner'
 import { toPng } from 'html-to-image'
-import downloadjs from 'downloadjs'
+import { toast } from 'sonner'
 
 type Measurement = {
   id: string
@@ -34,6 +33,8 @@ type Measurement = {
   water_ratio: number | null
   waist_circumference: number | null
   hip_circumference: number | null
+  arm_circumference: number | null
+  leg_circumference: number | null
   created_at: string
 }
 
@@ -43,9 +44,11 @@ type ProgressTabProps = {
 }
 
 export default function ProgressTab({ clientId, client }: ProgressTabProps) {
+  // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL RETURNS OR LOGIC
   const [measurements, setMeasurements] = useState<Measurement[]>([])
   const [loading, setLoading] = useState(true)
   const [profile, setProfile] = useState<{ full_name: string | null } | null>(null)
+  const [generatingImage, setGeneratingImage] = useState(false)
 
   useEffect(() => {
     loadMeasurements()
@@ -138,6 +141,98 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
     return latestMeasurement.weight / (heightInMeters * heightInMeters)
   }, [client.height, measurements])
 
+  // Calculate ideal weight (BMI 22)
+  const idealWeight = useMemo(() => {
+    if (!client.height) return null
+    const heightInMeters = client.height / 100
+    return 22 * heightInMeters * heightInMeters
+  }, [client.height])
+
+  // BMI Goal Meter Component
+  const BMIGoalMeter = ({ bmi }: { bmi: number }) => {
+    const minBMI = 16
+    const maxBMI = 35
+    const normalMin = 18.5
+    const normalMax = 24.9
+    const overweightMin = 25
+    const obeseMin = 30
+
+    // Calculate positions as percentages
+    const currentPosition = ((bmi - minBMI) / (maxBMI - minBMI)) * 100
+    const normalStart = ((normalMin - minBMI) / (maxBMI - minBMI)) * 100
+    const normalEnd = ((normalMax - minBMI) / (maxBMI - minBMI)) * 100
+    const overweightStart = ((overweightMin - minBMI) / (maxBMI - minBMI)) * 100
+    const obeseStart = ((obeseMin - minBMI) / (maxBMI - minBMI)) * 100
+
+    // Determine BMI category
+    const getBMICategory = () => {
+      if (bmi < 18.5) return { label: 'Zayıf', color: 'bg-blue-500' }
+      if (bmi < 25) return { label: 'Normal', color: 'bg-green-500' }
+      if (bmi < 30) return { label: 'Fazla Kilolu', color: 'bg-yellow-500' }
+      return { label: 'Obez', color: 'bg-red-500' }
+    }
+
+    const category = getBMICategory()
+
+    return (
+      <div className="space-y-2">
+        {/* BMI Bar */}
+        <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
+          {/* Underweight zone (16-18.5) */}
+          <div
+            className="absolute h-full bg-blue-300"
+            style={{ left: '0%', width: `${normalStart}%` }}
+          />
+          {/* Normal zone (18.5-24.9) */}
+          <div
+            className="absolute h-full bg-green-500"
+            style={{ left: `${normalStart}%`, width: `${normalEnd - normalStart}%` }}
+          />
+          {/* Overweight zone (25-29.9) */}
+          <div
+            className="absolute h-full bg-yellow-500"
+            style={{ left: `${overweightStart}%`, width: `${obeseStart - overweightStart}%` }}
+          />
+          {/* Obese zone (30-35) */}
+          <div
+            className="absolute h-full bg-red-500"
+            style={{ left: `${obeseStart}%`, width: `${100 - obeseStart}%` }}
+          />
+          
+          {/* Current BMI Indicator */}
+          <div
+            className="absolute top-0 h-full w-0.5 bg-gray-900 z-10"
+            style={{ left: `${Math.min(100, Math.max(0, currentPosition))}%`, transform: 'translateX(-50%)' }}
+          >
+            <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+              <div className="bg-gray-900 text-white text-xs px-1.5 py-0.5 rounded font-semibold">
+                {bmi.toFixed(1)}
+              </div>
+              <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-0.5 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-gray-900"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Labels */}
+        <div className="flex justify-between text-xs text-gray-600">
+          <span>16</span>
+          <span className="text-green-600 font-semibold">18.5</span>
+          <span className="text-yellow-600 font-semibold">25</span>
+          <span className="text-red-600 font-semibold">30</span>
+          <span>35</span>
+        </div>
+
+        {/* Category Badge */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-600">Durum:</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold text-white ${category.color}`}>
+            {category.label}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   // Calculate Body Composition Data for Donut Chart
   const bodyCompositionData = useMemo(() => {
     if (measurements.length === 0) return null
@@ -156,6 +251,56 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
       { name: 'Diğer Doku', value: remaining, color: '#e5e7eb' },
     ].filter(item => item.value > 0) // Only show segments with values > 0
   }, [measurements])
+
+  // Calculate Goal Progress (using client.target_weight or BMI 22 as fallback)
+  const goalProgress = useMemo(() => {
+    if (!client.height || measurements.length === 0) return null
+    
+    const firstMeasurement = measurements[0]
+    const latestMeasurement = measurements[measurements.length - 1]
+    
+    if (!firstMeasurement.weight || !latestMeasurement.weight) return null
+    
+    // Use client's target_weight if set, otherwise calculate ideal weight (BMI 22)
+    const heightInMeters = client.height / 100
+    const targetWeight = client.target_weight ?? (22 * heightInMeters * heightInMeters)
+    
+    // Calculate total weight loss needed (or gain if target is higher)
+    const totalWeightToLose = firstMeasurement.weight - targetWeight
+    
+    // Calculate current weight loss
+    const currentWeightLoss = firstMeasurement.weight - latestMeasurement.weight
+    
+    // Calculate progress percentage (0-100%)
+    // If target is to lose weight, progress is positive
+    // If target is to gain weight, we need to reverse the calculation
+    let progressPercent = 0
+    if (totalWeightToLose > 0) {
+      // Need to lose weight
+      progressPercent = Math.min(100, Math.max(0, (currentWeightLoss / totalWeightToLose) * 100))
+    } else if (totalWeightToLose < 0) {
+      // Need to gain weight
+      const totalWeightToGain = Math.abs(totalWeightToLose)
+      const currentWeightGain = Math.max(0, latestMeasurement.weight - firstMeasurement.weight)
+      progressPercent = Math.min(100, Math.max(0, (currentWeightGain / totalWeightToGain) * 100))
+    } else {
+      // Already at target
+      progressPercent = 100
+    }
+    
+    // Remaining weight to lose/gain
+    const remainingWeight = Math.abs(totalWeightToLose - currentWeightLoss)
+    
+    return {
+      targetWeight,
+      totalWeightToLose,
+      currentWeightLoss,
+      progressPercent,
+      remainingWeight,
+      firstWeight: firstMeasurement.weight,
+      currentWeight: latestMeasurement.weight,
+    }
+  }, [measurements, client.height, client.target_weight])
 
   // Calculate Summary Metrics for Print Cards
   const summaryMetrics = useMemo(() => {
@@ -181,6 +326,9 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
         : null,
       fatChange: firstMeasurement.body_fat_ratio !== null && latestMeasurement.body_fat_ratio !== null
         ? latestMeasurement.body_fat_ratio - firstMeasurement.body_fat_ratio
+        : null,
+      muscleChange: firstMeasurement.muscle_ratio !== null && latestMeasurement.muscle_ratio !== null
+        ? latestMeasurement.muscle_ratio - firstMeasurement.muscle_ratio
         : null,
       bmiChange,
     }
@@ -219,6 +367,11 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
         latestMeasurement.muscle_ratio,
         false
       ), // Gain is good
+      water: calculateDelta(
+        firstMeasurement.water_ratio,
+        latestMeasurement.water_ratio,
+        false
+      ), // Gain is good (hydration)
       waist: calculateDelta(
         firstMeasurement.waist_circumference,
         latestMeasurement.waist_circumference,
@@ -229,51 +382,21 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
         latestMeasurement.hip_circumference,
         true
       ), // Loss is good
+      arm: calculateDelta(
+        firstMeasurement.arm_circumference,
+        latestMeasurement.arm_circumference,
+        false
+      ), // Gain is good (muscle)
+      leg: calculateDelta(
+        firstMeasurement.leg_circumference,
+        latestMeasurement.leg_circumference,
+        false
+      ), // Gain is good (muscle)
       firstMeasurement,
       latestMeasurement,
     }
   }, [measurements])
 
-  // Mask client name for privacy (show only first name + first letter of last name)
-  const getMaskedName = (fullName: string) => {
-    const parts = fullName.trim().split(' ')
-    if (parts.length === 1) return parts[0]
-    const firstName = parts[0]
-    const lastNameInitial = parts[parts.length - 1][0]?.toUpperCase() || ''
-    return `${firstName} ${lastNameInitial}.`
-  }
-
-  const handleGenerateSuccessCard = async () => {
-    if (!stats || stats.weightChange >= 0) {
-      toast.error('Başarı kartı için kilo kaybı gereklidir.')
-      return
-    }
-
-    const cardElement = document.getElementById('success-card-container')
-    if (!cardElement) {
-      toast.error('Kart oluşturulamadı. Sayfayı yenileyin.')
-      return
-    }
-
-    toast.loading('Başarı kartı hazırlanıyor...', { id: 'generating-card' })
-
-    try {
-      const dataUrl = await toPng(cardElement, {
-        quality: 1.0,
-        pixelRatio: 2,
-        backgroundColor: '#ffffff',
-        width: 1080,
-        height: 1920,
-      })
-
-      downloadjs(dataUrl, `diyetlik-basari-karti-${client.name.replace(/\s+/g, '-')}.png`, 'image/png')
-      
-      toast.success('Başarı kartı indirildi!', { id: 'generating-card' })
-    } catch (error) {
-      console.error('Error generating card:', error)
-      toast.error('Kart oluşturulurken bir hata oluştu.', { id: 'generating-card' })
-    }
-  }
 
   if (loading) {
     return (
@@ -301,14 +424,63 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
   // Check if we have weight data for charts
   const hasWeightData = chartData.length > 0
 
-  const handlePrint = () => {
-    window.print()
+  const handleDownloadReport = async () => {
+    try {
+      setGeneratingImage(true)
+      toast.info('Rapor görseli oluşturuluyor...')
+
+      // Wait a bit for the component to render
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      const container = document.getElementById('full-report-capture')
+      if (!container) {
+        toast.error('Rapor görseli oluşturulamadı. Lütfen tekrar deneyin.')
+        setGeneratingImage(false)
+        return
+      }
+
+      // A4 aspect ratio: 1080x1530px (portrait)
+      const width = 1080
+      const height = 1530
+
+      // Generate image with high resolution
+      const dataUrl = await toPng(container, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: '#ffffff',
+        width: width,
+        height: height,
+        canvasWidth: width * 2, // High DPI
+        canvasHeight: height * 2, // High DPI
+        cacheBust: true,
+        style: {
+          transform: 'scale(1)',
+          transformOrigin: 'top left',
+        },
+      })
+
+      // Create download link
+      const link = document.createElement('a')
+      const dateStr = format(new Date(), 'yyyy-MM-dd', { locale: tr })
+      link.download = `gelisim-raporu-diyetlik-${dateStr}.png`
+      link.href = dataUrl
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success('Rapor görseli indirildi!')
+    } catch (error) {
+      console.error('Error generating report image:', error)
+      toast.error('Rapor görseli oluşturulurken hata oluştu')
+    } finally {
+      setGeneratingImage(false)
+    }
   }
 
   // Helper function to determine KPI status and styling
   const getKpiStatus = (
     value: number | null,
-    metricType: 'weight' | 'fat' | 'bmi'
+    metricType: 'weight' | 'fat' | 'bmi' | 'muscle'
   ): {
     status: 'good' | 'bad' | 'critical' | 'neutral'
     bgColor: string
@@ -397,6 +569,29 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
           }
         }
         break
+
+      case 'muscle':
+        // Muscle gain (> 0) is GOOD, muscle loss (< 0) is BAD
+        if (value > 0) {
+          return {
+            status: 'good',
+            bgColor: 'bg-green-50',
+            borderColor: 'border-green-500',
+            textColor: 'text-green-700',
+            icon: <ArrowUp className="w-6 h-6 text-green-600" />,
+            label: 'Kas Artışı',
+          }
+        } else if (value < 0) {
+          return {
+            status: 'bad',
+            bgColor: 'bg-red-50',
+            borderColor: 'border-red-500',
+            textColor: 'text-red-700',
+            icon: <ArrowDown className="w-6 h-6 text-red-600" />,
+            label: 'Kas Azalması',
+          }
+        }
+        break
     }
 
     // Neutral (value === 0)
@@ -412,899 +607,375 @@ export default function ProgressTab({ clientId, client }: ProgressTabProps) {
 
   return (
     <div className="space-y-6">
-      {/* Print Styles - Aggressive Overrides */}
+      {/* Report Container Styles for Image Generation */}
       <style jsx global>{`
-        @page {
-          size: A4 portrait;
-          margin: 2cm;
-        }
-        @media print {
-          /* EN KRİTİK: Her şeyi göster ve konumlandırmayı sıfırla */
-          body, html, #root, #__next, [data-nextjs-scroll-focus-boundary] {
-            visibility: visible !important;
-            display: block !important;
-            position: static !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-            overflow: visible !important;
-            background: #fff !important;
-          }
-
-          /* Dashboard layout wrapper'ı zorla göster */
-          [class*="min-h-screen"],
-          [class*="flex"],
-          [class*="flex-1"] {
-            display: block !important;
-            visibility: visible !important;
-            position: static !important;
-            width: 100% !important;
-            height: auto !important;
-          }
-
-          /* Main wrapper ve container'ları zorla göster */
-          main, 
-          #printable-report-container,
-          .printable-progress-report, 
-          .printable-progress-report *,
-          #printable-report-container * {
-            visibility: visible !important;
-            display: block !important;
-            position: static !important;
-            opacity: 1 !important;
-            color: #000 !important;
-            background-color: #fff !important;
-          }
-
-          /* Grid ve flex container'ları koru */
-          .grid {
-            display: grid !important;
-            visibility: visible !important;
-          }
-
-          .flex {
-            display: flex !important;
-            visibility: visible !important;
-          }
-
-          .space-y-6 > * + * {
-            margin-top: 1.5rem !important;
-          }
-
-          /* Metin Rengi ve Arka Planı Zorla - Sadece printable container içinde */
-          #printable-report-container *,
-          .printable-progress-report * {
-            box-shadow: none !important;
-            text-shadow: none !important;
-          }
-
-          /* Printable report container ve içeriği */
-          #printable-report-container,
-          .printable-progress-report {
-            display: block !important;
-            visibility: visible !important;
-            width: 100% !important;
-            max-width: 100% !important;
-            position: static !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            background: #fff !important;
-            color: #000 !important;
-          }
-
-          #printable-report-container *,
-          .printable-progress-report * {
-            visibility: visible !important;
-            color: #000 !important;
-            background-color: #fff !important;
-          }
-
-          /* Gereksiz elementleri gizle (Sidebar, Header, Buttonlar) */
-          .no-print,
-          nav,
-          header,
-          aside,
-          [class*="sidebar"],
-          [class*="Sidebar"],
-          [class*="header"],
-          [class*="Header"],
-          button:not(.print-button),
-          .bg-gradient-to-r {
-            display: none !important;
-            visibility: hidden !important;
-          }
-
-          /* Print header göster */
-          .print-header {
-            display: block !important;
-            visibility: visible !important;
-            margin-bottom: 0.5cm !important;
-            padding-bottom: 0.3cm !important;
-            border-bottom: 1px solid #000 !important;
-            color: #000 !important;
-            background: #fff !important;
-            page-break-after: avoid !important;
-          }
-
-          /* Print Layout: Single Column - Natural Flow */
-          .print-main-content {
-            display: block !important;
-            width: 100% !important;
-            height: auto !important;
-            visibility: visible !important;
-            margin-bottom: 0.3cm !important;
-          }
-
-          /* KPI Cards - Compact 3-column grid for print */
-          .grid.grid-cols-1.md\\:grid-cols-3 {
-            display: grid !important;
-            grid-template-columns: repeat(3, 1fr) !important;
-            gap: 0.3cm !important;
-            margin-bottom: 0.4cm !important;
-            page-break-inside: avoid !important;
-          }
-
-          /* Ensure KPI cards are visible in print */
-          .bg-green-50,
-          .bg-red-50,
-          .bg-amber-50,
-          .bg-gray-50 {
-            background-color: #fff !important;
-            border: 1px solid #000 !important;
-          }
-
-          .border-green-500,
-          .border-red-500,
-          .border-amber-500,
-          .border-gray-200 {
-            border-color: #000 !important;
-          }
-
-          /* KPI card text in print */
-          .text-green-700,
-          .text-red-700,
-          .text-amber-700,
-          .text-gray-500 {
-            color: #000 !important;
-          }
-
-          /* KPI card icons in print */
-          svg {
-            visibility: visible !important;
-            display: inline-block !important;
-          }
-
-          /* Print sections - Compact */
-          .print-section {
-            page-break-inside: avoid !important;
-            margin-bottom: 0.4cm !important;
-            padding: 0.3cm !important;
-            visibility: visible !important;
-            display: block !important;
-            color: #000 !important;
-            background: #fff !important;
-            border: 1px solid #ccc !important;
-          }
-
-          .print-section h3 {
-            font-size: 12pt !important;
-            margin-bottom: 0.3cm !important;
-            font-weight: bold !important;
-            color: #000 !important;
-          }
-
-          .print-table {
-            page-break-inside: avoid !important;
-            visibility: visible !important;
-          }
-
-          /* Compact chart sizing for print - Dual Y-Axis */
-          .print-chart {
-            page-break-inside: avoid !important;
-            max-height: 200px !important;
-            visibility: visible !important;
-            padding: 0.2cm !important;
-            width: 100% !important;
-          }
-
-          .print-chart .recharts-wrapper,
-          .print-chart svg {
-            max-height: 200px !important;
-            height: 200px !important;
-            width: 100% !important;
-          }
-
-          /* Print Footer */
-          .print-footer {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            gap: 0.3cm !important;
-            padding: 0.3cm !important;
-            border-top: 1px solid #000 !important;
-            background: #fff !important;
-            font-size: 8pt !important;
-            color: #000 !important;
-          }
-
-          .print-footer img {
-            height: 20px !important;
-            width: auto !important;
-          }
-
-          /* Donut chart - smaller for print */
-          .print-donut-container {
-            width: 180px !important;
-            height: 180px !important;
-          }
-
-          /* Stats cards - compact for print */
-          .print-stats-grid {
-            display: grid !important;
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 0.3cm !important;
-            margin-bottom: 0.4cm !important;
-          }
-
-          .print-stats-grid > div {
-            padding: 0.2cm !important;
-            font-size: 9pt !important;
-          }
-
-          .print-stats-grid p {
-            font-size: 9pt !important;
-            margin: 0.1cm 0 !important;
-          }
-
-          .print-stats-grid .text-2xl {
-            font-size: 14pt !important;
-          }
-
-          /* Tabloları zorla göster - Ultra Compact for print */
-          table, thead, tbody, tr, td, th {
-            visibility: visible !important;
-            display: table !important;
-            color: #000 !important;
-            background: #fff !important;
-            border-color: #000 !important;
-            font-size: 0.75rem !important;
-          }
-
-          table th {
-            padding: 0.15cm 0.1cm !important;
-            font-size: 0.7rem !important;
-            font-weight: bold !important;
-          }
-
-          table td {
-            padding: 0.1cm !important;
-            font-size: 0.7rem !important;
-          }
-
-          table {
-            width: 100% !important;
-            border-collapse: collapse !important;
-          }
-
-          /* Grafikleri zorla göster */
-          svg, canvas {
-            visibility: visible !important;
-            display: block !important;
-          }
-
-          /* Printable container içindeki tüm elementleri göster */
-          #printable-report-container div,
-          .printable-progress-report div {
-            visibility: visible !important;
-          }
-
-          /* Hidden success card container'ı gizle */
-          #success-card-container {
-            display: none !important;
-            visibility: hidden !important;
-          }
-        }
-        @media screen {
-          .print-header,
-          .print-footer {
-            display: none;
-          }
-          .print-main-content {
-            display: block !important;
-          }
+        #full-report-capture {
+          width: 1080px;
+          min-height: 1530px;
+          background: white;
+          padding: 40px;
+          box-sizing: border-box;
         }
       `}</style>
 
-      {/* Print Header (only visible when printing) */}
-      <div className="print-header">
-        <h1 className="text-xl font-bold text-gray-900 mb-1">
-          Diyetlik Kapsamlı Gelişim Raporu - {client.name}
-        </h1>
-        <div className="text-xs text-gray-700 space-y-0.5">
-          {profile?.full_name && (
-            <p><strong>Hazırlayan:</strong> Dyt. {profile.full_name}</p>
-          )}
-          <p><strong>Tarih:</strong> {format(new Date(), 'd MMMM yyyy', { locale: tr })}</p>
-        </div>
-      </div>
-
-      {/* Print Footer (only visible when printing) */}
-      <div className="print-footer">
-        <img src="/logo.png" alt="Diyetlik Logo" />
-        <span>Diyetlik ile hazırlanmıştır.</span>
-      </div>
-
-      {/* Print Button */}
-      <div className="no-print flex justify-end mb-4">
+      {/* Download Button */}
+      <div className="flex justify-end mb-6">
         <Button
-          onClick={handlePrint}
-          className="inline-flex items-center gap-2 bg-green-600 text-white hover:bg-green-700"
+          onClick={handleDownloadReport}
+          disabled={generatingImage}
+          className="inline-flex items-center gap-2 bg-green-600 text-white hover:bg-green-700 px-6 py-3 text-base font-semibold shadow-md disabled:opacity-50"
         >
-          <Printer className="w-4 h-4" />
-          Gelişim Raporu Yazdır
+          {generatingImage ? (
+            <>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              Oluşturuluyor...
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5" />
+              Gelişim Raporunu İndir (PNG)
+            </>
+          )}
         </Button>
       </div>
 
-      <div id="printable-report-container" className="printable-progress-report space-y-6">
-      {/* Success Card Generator Button */}
-      <div className="no-print">
-      {stats && stats.weightChange < 0 && (
-        <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-orange-500 rounded-lg p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xl font-bold mb-2">Başarı Hikayenizi Paylaşın! 📸</h3>
-              <p className="text-white/90">
-                Instagram'da paylaşmak için profesyonel bir başarı kartı oluşturun
-              </p>
-            </div>
-            <Button
-              onClick={handleGenerateSuccessCard}
-              className="bg-white text-purple-600 hover:bg-gray-100 font-semibold px-6 py-3 flex items-center gap-2"
-            >
-              <Instagram className="w-5 h-5" />
-              Başarı Kartı Oluştur
-            </Button>
+      {/* Report Content Container for Image Capture */}
+      <div id="full-report-capture" className="mx-auto">
+        {/* Report Header */}
+        <div className="mb-8 pb-4 border-b border-gray-300">
+          <h1 className="text-5xl font-bold text-gray-900 mb-4 text-center">
+            KAPSAMLI GELİŞİM RAPORU
+          </h1>
+          {/* Client Name and Age - Prominently Displayed */}
+          <div className="text-xl text-gray-900 space-y-1 text-center font-bold mb-3">
+            <p className="text-2xl">{client.name}</p>
+            {client.age && <p>Yaş: {client.age}</p>}
+          </div>
+          <div className="text-base text-gray-700 space-y-0.5 text-center">
+            {profile?.full_name && (
+              <p><strong>Hazırlayan:</strong> Dyt. {profile.full_name}</p>
+            )}
+            <p><strong>Tarih:</strong> {format(new Date(), 'd MMMM yyyy', { locale: tr })}</p>
           </div>
         </div>
-      )}
 
-      {/* Hidden Success Card Container */}
-      {stats && stats.weightChange < 0 && (
-        <div
-          id="success-card-container"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            zIndex: -9999,
-            pointerEvents: 'none',
-            width: '1080px',
-            height: '1920px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '80px 60px',
-            boxSizing: 'border-box',
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            color: '#ffffff',
-            backgroundColor: '#667eea',
-          }}
-        >
-          {/* Header */}
-          <div style={{ textAlign: 'center', width: '100%' }}>
-            <div
-              style={{
-                fontSize: '24px',
-                fontWeight: 600,
-                letterSpacing: '2px',
-                opacity: 0.9,
-                marginBottom: '40px',
-              }}
-            >
-              DİYETLİK BAŞARI HİKAYESİ
-            </div>
-          </div>
-
-          {/* Main Content */}
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              textAlign: 'center',
-              width: '100%',
-            }}
-          >
-            {/* Client Name */}
-            <div
-              style={{
-                fontSize: '64px',
-                fontWeight: 700,
-                marginBottom: '60px',
-                textShadow: '0 4px 20px rgba(0,0,0,0.3)',
-              }}
-            >
-              {getMaskedName(client.name)}
-            </div>
-
-            {/* Hero Stat - Weight Loss */}
-            <div
-              style={{
-                fontSize: '180px',
-                fontWeight: 900,
-                lineHeight: 1,
-                marginBottom: '40px',
-                textShadow: '0 6px 30px rgba(0,0,0,0.4)',
-                background: 'linear-gradient(180deg, #ffffff 0%, #f0f0f0 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                backgroundClip: 'text',
-              }}
-            >
-              {Math.abs(stats?.weightChange || 0).toFixed(1)}
-            </div>
-            <div
-              style={{
-                fontSize: '48px',
-                fontWeight: 600,
-                marginBottom: '60px',
-                opacity: 0.95,
-              }}
-            >
-              KİLO VERDİ
-            </div>
-
-            {/* Sub Stats */}
-            <div
-              style={{
-                display: 'flex',
-                gap: '30px',
-                marginTop: '40px',
-              }}
-            >
-              {stats.daysDiff > 0 && (
-                <div
-                  style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    backdropFilter: 'blur(10px)',
-                    borderRadius: '20px',
-                    padding: '20px 40px',
-                    fontSize: '28px',
-                    fontWeight: 600,
-                  }}
-                >
-                  {stats.daysDiff} GÜNDE
+        {/* Main Content */}
+        <div className="space-y-6">
+          {/* Top Info Row: VKİ, Hedef Kilo, and BMI Status Badge */}
+          <div className="mb-4">
+            <div className="grid grid-cols-3 gap-3">
+              {bmi !== null && (
+                <div className="bg-white border border-gray-300 rounded p-3 text-center">
+                  <p className="text-lg text-gray-600 mb-1">VKİ (BMI)</p>
+                  <p className="text-4xl font-bold text-gray-900">{bmi.toFixed(1)}</p>
                 </div>
               )}
-              <div
-                style={{
-                  background: 'rgba(255, 255, 255, 0.2)',
-                  backdropFilter: 'blur(10px)',
-                  borderRadius: '20px',
-                  padding: '20px 40px',
-                  fontSize: '28px',
-                  fontWeight: 600,
-                }}
-              >
-                {stats.totalMeasurements} ÖLÇÜM
-              </div>
-            </div>
-
-            {/* Progress Percentage */}
-            {stats && stats.weightChangePercent !== undefined && stats.weightChangePercent < 0 && (
-              <div
-                style={{
-                  marginTop: '40px',
-                  fontSize: '36px',
-                  fontWeight: 600,
-                  opacity: 0.9,
-                }}
-              >
-                %{Math.abs(stats.weightChangePercent || 0).toFixed(1)} Değişim
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div
-            style={{
-              width: '100%',
-              textAlign: 'center',
-              paddingTop: '40px',
-              borderTop: '2px solid rgba(255, 255, 255, 0.3)',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '20px',
-                fontWeight: 600,
-                marginBottom: '10px',
-                letterSpacing: '1px',
-              }}
-            >
-              DİYETLİK
-            </div>
-            <div
-              style={{
-                fontSize: '16px',
-                opacity: 0.8,
-                letterSpacing: '0.5px',
-              }}
-            >
-              Diyetlik altyapısı ile oluşturulmuştur
-            </div>
-            <div
-              style={{
-                fontSize: '18px',
-                fontWeight: 500,
-                marginTop: '8px',
-                opacity: 0.9,
-              }}
-            >
-              www.diyetlik.com.tr
-            </div>
-          </div>
-        </div>
-      )}
-      </div>
-
-      {/* Main Content - Single Column for Print */}
-      <div className="print-main-content">
-        {/* Progress KPI Cards - Top Section */}
-        {summaryMetrics && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            {/* Kilo KPI Card */}
-            {(() => {
-              const kpi = getKpiStatus(summaryMetrics.totalLoss, 'weight')
-              return (
-                <div
-                  className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-6 shadow-sm transition-all hover:shadow-md`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                      Kilo Değişimi
-                    </h4>
-                    {kpi.icon}
-                  </div>
-                  <div className={`${kpi.textColor} text-3xl font-extrabold mb-1`}>
-                    {summaryMetrics.totalLoss !== null
-                      ? `${summaryMetrics.totalLoss > 0 ? '+' : ''}${summaryMetrics.totalLoss.toFixed(1)} kg`
-                      : '-'}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{kpi.label}</p>
+              {(client.target_weight !== null || idealWeight !== null) && (
+                <div className="bg-white border border-gray-300 rounded p-3 text-center">
+                  <p className="text-lg text-gray-600 mb-1">Hedef Kilo</p>
+                  <p className="text-4xl font-bold text-gray-900">
+                    {(client.target_weight ?? idealWeight)?.toFixed(1)} kg
+                  </p>
                 </div>
-              )
-            })()}
-
-            {/* Yağ % KPI Card */}
-            {(() => {
-              const kpi = getKpiStatus(summaryMetrics.fatChange, 'fat')
-              return (
-                <div
-                  className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-6 shadow-sm transition-all hover:shadow-md`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                      Yağ % Değişimi
-                    </h4>
-                    {kpi.icon}
+              )}
+              {/* BMI Status Badge */}
+              {bmi !== null && (() => {
+                const getBMICategory = () => {
+                  if (bmi < 18.5) return { label: 'Zayıf', color: 'bg-blue-500' }
+                  if (bmi < 25) return { label: 'Normal', color: 'bg-green-500' }
+                  if (bmi < 30) return { label: 'Fazla Kilolu', color: 'bg-yellow-500' }
+                  return { label: 'Obez', color: 'bg-red-500' }
+                }
+                const category = getBMICategory()
+                return (
+                  <div className="bg-white border border-gray-300 rounded p-3 text-center flex flex-col justify-center">
+                    <p className="text-lg text-gray-600 mb-1">Durum</p>
+                    <span className={`px-3 py-1 rounded-full text-base font-semibold text-white ${category.color}`}>
+                      {category.label}
+                    </span>
                   </div>
-                  <div className={`${kpi.textColor} text-3xl font-extrabold mb-1`}>
-                    {summaryMetrics.fatChange !== null
-                      ? `${summaryMetrics.fatChange > 0 ? '+' : ''}${summaryMetrics.fatChange.toFixed(1)}%`
-                      : '-'}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{kpi.label}</p>
-                </div>
-              )
-            })()}
-
-            {/* VKİ KPI Card */}
-            {(() => {
-              const kpi = getKpiStatus(summaryMetrics.bmiChange, 'bmi')
-              return (
-                <div
-                  className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-6 shadow-sm transition-all hover:shadow-md`}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                      VKİ Değişimi
-                    </h4>
-                    {kpi.icon}
-                  </div>
-                  <div className={`${kpi.textColor} text-3xl font-extrabold mb-1`}>
-                    {summaryMetrics.bmiChange !== null
-                      ? `${summaryMetrics.bmiChange > 0 ? '+' : ''}${summaryMetrics.bmiChange.toFixed(1)}`
-                      : '-'}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{kpi.label}</p>
-                </div>
-              )
-            })()}
+                )
+              })()}
+            </div>
           </div>
-        )}
 
-        {/* Combined Dual Y-Axis Chart */}
-        {hasWeightData && (
-          <div className="print-section print-chart bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Kilo ve Yağ Oranı İlerlemesi</h3>
-            <ResponsiveContainer width="100%" height={300} className="print-chart-container">
-              <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis yAxisId="left" label={{ value: 'Kilo (kg)', angle: -90, position: 'insideLeft' }} />
-                <YAxis 
-                  yAxisId="right" 
-                  orientation="right" 
-                  label={{ value: 'Yağ Oranı (%)', angle: 90, position: 'insideRight' }}
-                />
-                <Tooltip />
-                <Legend />
-                <Line
-                  yAxisId="left"
-                  type="monotone"
-                  dataKey="weight"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  name="Kilo (kg)"
-                  dot={{ fill: '#10b981', r: 3 }}
-                />
-                {chartData.some((d) => d.bodyFat !== null) && (
-                  <Line
-                    yAxisId="right"
-                    type="monotone"
-                    dataKey="bodyFat"
-                    stroke="#3b82f6"
-                    strokeWidth={2}
-                    name="Yağ Oranı (%)"
-                    dot={{ fill: '#3b82f6', r: 3 }}
-                  />
-                )}
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+          {/* Change Metrics (KPI Summary): Kilo, Yağ, Kas Kütlesi */}
+          {summaryMetrics && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              {/* Kilo Değişimi KPI Card */}
+              {(() => {
+                const kpi = getKpiStatus(summaryMetrics.totalLoss, 'weight')
+                return (
+                  <div
+                    className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-4 shadow-sm`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-gray-700 uppercase tracking-wide">
+                        Kilo Değişimi
+                      </h4>
+                      {kpi.icon}
+                    </div>
+                    <div className={`${kpi.textColor} text-5xl font-extrabold mb-1`}>
+                      {summaryMetrics.totalLoss !== null
+                        ? `${summaryMetrics.totalLoss > 0 ? '+' : ''}${summaryMetrics.totalLoss.toFixed(1)} kg`
+                        : '-'}
+                    </div>
+                    <p className="text-base text-gray-500 mt-1">{kpi.label}</p>
+                  </div>
+                )
+              })()}
+
+              {/* Yağ % Değişimi KPI Card */}
+              {(() => {
+                const kpi = getKpiStatus(summaryMetrics.fatChange, 'fat')
+                return (
+                  <div
+                    className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-4 shadow-sm`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-gray-700 uppercase tracking-wide">
+                        Yağ % Değişimi
+                      </h4>
+                      {kpi.icon}
+                    </div>
+                    <div className={`${kpi.textColor} text-5xl font-extrabold mb-1`}>
+                      {summaryMetrics.fatChange !== null
+                        ? `${summaryMetrics.fatChange > 0 ? '+' : ''}${summaryMetrics.fatChange.toFixed(1)}%`
+                        : '-'}
+                    </div>
+                    <p className="text-base text-gray-500 mt-1">{kpi.label}</p>
+                  </div>
+                )
+              })()}
+
+              {/* Kas Kütlesi Değişimi KPI Card */}
+              {(() => {
+                const kpi = getKpiStatus(summaryMetrics.muscleChange, 'muscle')
+                return (
+                  <div
+                    className={`${kpi.bgColor} ${kpi.borderColor} border-2 rounded-lg p-4 shadow-sm`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-lg font-semibold text-gray-700 uppercase tracking-wide">
+                        Kas Kütlesi Değişimi
+                      </h4>
+                      {kpi.icon}
+                    </div>
+                    <div className={`${kpi.textColor} text-5xl font-extrabold mb-1`}>
+                      {summaryMetrics.muscleChange !== null
+                        ? `${summaryMetrics.muscleChange > 0 ? '+' : ''}${summaryMetrics.muscleChange.toFixed(1)}%`
+                        : '-'}
+                    </div>
+                    <p className="text-base text-gray-500 mt-1">{kpi.label}</p>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+
           {/* Before & After Comparison Report Card */}
           {comparisonData && (
-            <div className="print-section bg-white border border-gray-200 rounded-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">
-              Başlangıçtan Bugüne Gelişim Raporu
-            </h3>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">
-                    Ölçülen Değer
-                  </th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                    Başlangıç Değeri
-                  </th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                    Güncel Değer
-                  </th>
-                  <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">
-                    Fark (±)
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {/* Kilo (Weight) */}
-                {comparisonData.firstMeasurement.weight !== null &&
-                  comparisonData.latestMeasurement.weight !== null && (
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                        Kilo (Vücut Ağırlığı)
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.firstMeasurement.weight ?? 0).toFixed(1)} kg
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.latestMeasurement.weight ?? 0).toFixed(1)} kg
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        {comparisonData.weight.hasData && comparisonData.weight.value !== null && (
-                          <div className="flex items-center justify-end gap-2">
-                            {comparisonData.weight.isGood ? (
-                              <ArrowDown className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ArrowUp className="w-4 h-4 text-red-600" />
-                            )}
-                            <span
-                              className={`text-sm font-semibold ${
-                                comparisonData.weight.isGood
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}
-                            >
-                              {comparisonData.weight.value > 0 ? '+' : ''}
-                              {comparisonData.weight.value.toFixed(1)} kg
-                            </span>
-                          </div>
-                        )}
-                      </td>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <h3 className="text-3xl font-semibold text-gray-900 mb-4">
+                Başlangıçtan Bugüne Gelişim Raporu
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="text-left py-3 px-3 text-lg font-semibold text-gray-700">
+                        Ölçülen Değer
+                      </th>
+                      <th className="text-right py-3 px-3 text-lg font-semibold text-gray-700">
+                        Başlangıç Değeri
+                      </th>
+                      <th className="text-right py-3 px-3 text-lg font-semibold text-gray-700">
+                        Güncel Değer
+                      </th>
+                      <th className="text-right py-3 px-3 text-lg font-semibold text-gray-700">
+                        Fark (±)
+                      </th>
                     </tr>
-                  )}
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {/* Helper function to render table row */}
+                    {(() => {
+                      const renderMetricRow = (
+                        label: string,
+                        firstValue: number | null | undefined,
+                        latestValue: number | null | undefined,
+                        delta: { value: number | null; isGood: boolean | null; hasData: boolean } | null,
+                        unit: string,
+                        isGainGood: boolean = false,
+                        isCircumference: boolean = false
+                      ) => {
+                        // For circumference, 0 is invalid (missing data)
+                        // For other metrics, check only null/undefined
+                        const hasFirst = firstValue !== null && firstValue !== undefined && (!isCircumference || firstValue !== 0)
+                        const hasLatest = latestValue !== null && latestValue !== undefined && (!isCircumference || latestValue !== 0)
 
-                {/* Yağ Oranı (Body Fat Ratio) */}
-                {comparisonData.firstMeasurement.body_fat_ratio !== null &&
-                  comparisonData.latestMeasurement.body_fat_ratio !== null && (
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                        Yağ Oranı (%)
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.firstMeasurement.body_fat_ratio ?? 0).toFixed(1)}%
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.latestMeasurement.body_fat_ratio ?? 0).toFixed(1)}%
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        {comparisonData.bodyFat.hasData && comparisonData.bodyFat.value !== null && (
-                          <div className="flex items-center justify-end gap-2">
-                            {comparisonData.bodyFat.isGood ? (
-                              <ArrowDown className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ArrowUp className="w-4 h-4 text-red-600" />
-                            )}
-                            <span
-                              className={`text-sm font-semibold ${
-                                comparisonData.bodyFat.isGood
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}
-                            >
-                              {comparisonData.bodyFat.value > 0 ? '+' : ''}
-                              {comparisonData.bodyFat.value.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                        return (
+                          <tr className="hover:bg-gray-50">
+                            <td className="py-3 px-3 text-base font-medium text-gray-900">
+                              {label}
+                            </td>
+                            <td className="py-3 px-3 text-base text-gray-600 text-right">
+                              {hasFirst ? `${firstValue.toFixed(1)} ${unit}` : '-'}
+                            </td>
+                            <td className="py-3 px-3 text-base text-gray-600 text-right">
+                              {hasLatest ? `${latestValue.toFixed(1)} ${unit}` : '-'}
+                            </td>
+                            <td className="py-3 px-3 text-right">
+                              {delta?.hasData && delta.value !== null ? (
+                                <div className="flex items-center justify-end gap-2">
+                                  {delta.isGood ? (
+                                    isGainGood ? (
+                                      <ArrowUp className="w-5 h-5 text-green-600" />
+                                    ) : (
+                                      <ArrowDown className="w-5 h-5 text-green-600" />
+                                    )
+                                  ) : (
+                                    isGainGood ? (
+                                      <ArrowDown className="w-5 h-5 text-red-600" />
+                                    ) : (
+                                      <ArrowUp className="w-5 h-5 text-red-600" />
+                                    )
+                                  )}
+                                  <span
+                                    className={`text-base font-semibold ${
+                                      delta.isGood
+                                        ? 'text-green-600'
+                                        : 'text-red-600'
+                                    }`}
+                                  >
+                                    {delta.value > 0 ? '+' : ''}
+                                    {delta.value.toFixed(1)} {unit}
+                                  </span>
+                                </div>
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          </tr>
+                        )
+                      }
 
-                {/* Kas Kütlesi (Muscle Ratio) */}
-                {comparisonData.firstMeasurement.muscle_ratio !== null &&
-                  comparisonData.latestMeasurement.muscle_ratio !== null && (
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                        Kas Kütlesi (%)
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.firstMeasurement.muscle_ratio ?? 0).toFixed(1)}%
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.latestMeasurement.muscle_ratio ?? 0).toFixed(1)}%
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        {comparisonData.muscle.hasData && comparisonData.muscle.value !== null && (
-                          <div className="flex items-center justify-end gap-2">
-                            {comparisonData.muscle.isGood ? (
-                              <ArrowUp className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ArrowDown className="w-4 h-4 text-red-600" />
-                            )}
-                            <span
-                              className={`text-sm font-semibold ${
-                                comparisonData.muscle.isGood
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}
-                            >
-                              {comparisonData.muscle.value > 0 ? '+' : ''}
-                              {comparisonData.muscle.value.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                      return (
+                        <>
+                          {/* 1. Kilo (Weight) */}
+                          {renderMetricRow(
+                            'Kilo (Vücut Ağırlığı)',
+                            comparisonData.firstMeasurement.weight,
+                            comparisonData.latestMeasurement.weight,
+                            comparisonData.weight,
+                            'kg',
+                            false
+                          )}
 
-                {/* Bel Çevresi (Waist Circumference) */}
-                {comparisonData.firstMeasurement.waist_circumference !== null &&
-                  comparisonData.latestMeasurement.waist_circumference !== null && (
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                        Bel Çevresi (cm)
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.firstMeasurement.waist_circumference ?? 0).toFixed(1)} cm
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.latestMeasurement.waist_circumference ?? 0).toFixed(1)} cm
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        {comparisonData.waist.hasData && comparisonData.waist.value !== null && (
-                          <div className="flex items-center justify-end gap-2">
-                            {comparisonData.waist.isGood ? (
-                              <ArrowDown className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ArrowUp className="w-4 h-4 text-red-600" />
-                            )}
-                            <span
-                              className={`text-sm font-semibold ${
-                                comparisonData.waist.isGood
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}
-                            >
-                              {comparisonData.waist.value > 0 ? '+' : ''}
-                              {comparisonData.waist.value.toFixed(1)} cm
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
+                          {/* 2. Yağ Oranı (%) */}
+                          {renderMetricRow(
+                            'Yağ Oranı (%)',
+                            comparisonData.firstMeasurement.body_fat_ratio,
+                            comparisonData.latestMeasurement.body_fat_ratio,
+                            comparisonData.bodyFat,
+                            '%',
+                            false
+                          )}
 
-                {/* Kalça Çevresi (Hip Circumference) */}
-                {comparisonData.firstMeasurement.hip_circumference !== null &&
-                  comparisonData.latestMeasurement.hip_circumference !== null && (
-                    <tr className="hover:bg-gray-50">
-                      <td className="py-4 px-4 text-sm font-medium text-gray-900">
-                        Kalça Çevresi (cm)
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.firstMeasurement.hip_circumference ?? 0).toFixed(1)} cm
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-600 text-right">
-                        {(comparisonData.latestMeasurement.hip_circumference ?? 0).toFixed(1)} cm
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        {comparisonData.hip.hasData && comparisonData.hip.value !== null && (
-                          <div className="flex items-center justify-end gap-2">
-                            {comparisonData.hip.isGood ? (
-                              <ArrowDown className="w-4 h-4 text-green-600" />
-                            ) : (
-                              <ArrowUp className="w-4 h-4 text-red-600" />
-                            )}
-                            <span
-                              className={`text-sm font-semibold ${
-                                comparisonData.hip.isGood
-                                  ? 'text-green-600'
-                                  : 'text-red-600'
-                              }`}
-                            >
-                              {comparisonData.hip.value > 0 ? '+' : ''}
-                              {comparisonData.hip.value.toFixed(1)} cm
-                            </span>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  )}
-              </tbody>
-            </table>
-          </div>
-          {comparisonData.firstMeasurement.date && comparisonData.latestMeasurement.date && (
-            <div className="mt-4 pt-4 border-t border-gray-200 text-xs text-gray-500">
-              <p>
-                Başlangıç Tarihi:{' '}
-                {format(parseISO(comparisonData.firstMeasurement.date), 'd MMMM yyyy', {
-                  locale: tr,
-                })}
-              </p>
-              <p className="mt-1">
-                Güncel Tarih:{' '}
-                {format(parseISO(comparisonData.latestMeasurement.date), 'd MMMM yyyy', {
-                  locale: tr,
-                })}
-              </p>
+                          {/* 3. Kas Kütlesi (%) */}
+                          {renderMetricRow(
+                            'Kas Kütlesi (%)',
+                            comparisonData.firstMeasurement.muscle_ratio,
+                            comparisonData.latestMeasurement.muscle_ratio,
+                            comparisonData.muscle,
+                            '%',
+                            true
+                          )}
+
+                          {/* 4. Vücut Su Oranı (%) */}
+                          {renderMetricRow(
+                            'Vücut Su Oranı (%)',
+                            comparisonData.firstMeasurement.water_ratio,
+                            comparisonData.latestMeasurement.water_ratio,
+                            comparisonData.water,
+                            '%',
+                            true
+                          )}
+
+                          {/* 5. Bel Çevresi (cm) */}
+                          {renderMetricRow(
+                            'Bel Çevresi (cm)',
+                            comparisonData.firstMeasurement.waist_circumference,
+                            comparisonData.latestMeasurement.waist_circumference,
+                            comparisonData.waist,
+                            'cm',
+                            false,
+                            true
+                          )}
+
+                          {/* 6. Kalça Çevresi (cm) */}
+                          {renderMetricRow(
+                            'Kalça Çevresi (cm)',
+                            comparisonData.firstMeasurement.hip_circumference,
+                            comparisonData.latestMeasurement.hip_circumference,
+                            comparisonData.hip,
+                            'cm',
+                            false,
+                            true
+                          )}
+
+                          {/* 7. Kol Çevresi (cm) */}
+                          {renderMetricRow(
+                            'Kol Çevresi (cm)',
+                            comparisonData.firstMeasurement.arm_circumference,
+                            comparisonData.latestMeasurement.arm_circumference,
+                            comparisonData.arm,
+                            'cm',
+                            true,
+                            true
+                          )}
+
+                          {/* 8. Bacak Çevresi (cm) */}
+                          {renderMetricRow(
+                            'Bacak Çevresi (cm)',
+                            comparisonData.firstMeasurement.leg_circumference,
+                            comparisonData.latestMeasurement.leg_circumference,
+                            comparisonData.leg,
+                            'cm',
+                            true,
+                            true
+                          )}
+                        </>
+                      )
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+              {comparisonData.firstMeasurement.date && comparisonData.latestMeasurement.date && (
+                <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+                  <p className="mb-1">
+                    Başlangıç Tarihi:{' '}
+                    {format(parseISO(comparisonData.firstMeasurement.date), 'd MMMM yyyy', {
+                      locale: tr,
+                    })}
+                  </p>
+                  <p>
+                    Güncel Tarih:{' '}
+                    {format(parseISO(comparisonData.latestMeasurement.date), 'd MMMM yyyy', {
+                      locale: tr,
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
           )}
-            </div>
-          )}
+        </div>
 
-      </div>
+        {/* Report Footer */}
+        <div className="mt-8 pt-4 border-t border-gray-300 flex items-center justify-center gap-3">
+          <img src="/logo.png" alt="Diyetlik Logo" className="h-8" />
+          <span className="text-base text-gray-600">Diyetlik ile yapılmıştır.</span>
+        </div>
       </div>
     </div>
   )
