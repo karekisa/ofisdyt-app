@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import FaviconForce from "@/components/FaviconForce";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -69,6 +70,14 @@ export const metadata: Metadata = {
     google: "VJdGaRIAPwQLdTfEdMCht2fRXEEBNw6e-uwKu7Pz0sU",
     // yandex: 'your-yandex-verification-code',
   },
+  icons: {
+    icon: [
+      { url: '/icon.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icon.png', sizes: '16x16', type: 'image/png' },
+    ],
+    shortcut: '/favicon.ico.png',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({
@@ -81,6 +90,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <FaviconForce />
         {children}
         <Toaster position="top-center" richColors />
       </body>
