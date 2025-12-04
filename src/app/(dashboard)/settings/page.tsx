@@ -9,18 +9,62 @@ import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { Profile } from '@/lib/types'
-import { Eye, ExternalLink, Link as LinkIcon } from 'lucide-react'
+import { Profile, DietTemplate } from '@/lib/types'
+import { Eye, ExternalLink, Link as LinkIcon, Plus, Trash2 } from 'lucide-react'
 import { slugify } from '@/lib/utils'
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const router = useRouter()
+  
+  // Diet Templates state
+  type DayPlan = {
+    breakfast: string
+    lunch: string
+    snack: string
+    dinner: string
+  }
+
+  const DAYS = [
+    { key: 'pazartesi', label: 'Pazartesi' },
+    { key: 'sali', label: 'Salı' },
+    { key: 'carsamba', label: 'Çarşamba' },
+    { key: 'persembe', label: 'Perşembe' },
+    { key: 'cuma', label: 'Cuma' },
+    { key: 'cumartesi', label: 'Cumartesi' },
+    { key: 'pazar', label: 'Pazar' },
+  ]
+
+  const EMPTY_DAY_PLAN: DayPlan = {
+    breakfast: '',
+    lunch: '',
+    snack: '',
+    dinner: '',
+  }
+
+  const [templates, setTemplates] = useState<DietTemplate[]>([])
+  const [selectedTemplate, setSelectedTemplate] = useState<DietTemplate | null>(null)
+  const [templateTitle, setTemplateTitle] = useState('')
+  const [templateCategory, setTemplateCategory] = useState<'daily' | 'weekly'>('daily')
+  const [dietPlan, setDietPlan] = useState<Record<string, DayPlan>>({
+    pazartesi: { ...EMPTY_DAY_PLAN },
+    sali: { ...EMPTY_DAY_PLAN },
+    carsamba: { ...EMPTY_DAY_PLAN },
+    persembe: { ...EMPTY_DAY_PLAN },
+    cuma: { ...EMPTY_DAY_PLAN },
+    cumartesi: { ...EMPTY_DAY_PLAN },
+    pazar: { ...EMPTY_DAY_PLAN },
+  })
+  const [activeDay, setActiveDay] = useState('pazartesi')
+  const [templatesLoading, setTemplatesLoading] = useState(false)
+  const [savingTemplate, setSavingTemplate] = useState(false)
 
   useEffect(() => {
     fetchProfile()
+    fetchTemplates()
   }, [])
 
   const fetchProfile = async () => {
@@ -153,6 +197,302 @@ export default function SettingsPage() {
 
     const publicUrl = `https://diyetlik.com.tr/randevu/${profile.public_slug}`
     window.open(publicUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  // Diet Templates functions
+  const fetchTemplates = async () => {
+    try {
+      setTemplatesLoading(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data, error } = await supabase
+        .from('diet_templates')
+        .select('*')
+        .eq('dietitian_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setTemplates(data || [])
+    } catch (error) {
+      console.error('Error fetching templates:', error)
+      toast.error('Şablonlar yüklenirken hata oluştu')
+    } finally {
+      setTemplatesLoading(false)
+    }
+  }
+
+  // Parse content string into structured state
+  const parseContentToState = (content: string, category: 'daily' | 'weekly') => {
+    const upperContent = content.toUpperCase()
+    const isWeekly = category === 'weekly' || ['PAZARTESİ', 'PAZARTESI', 'SALI', 'ÇARŞAMBA', 'CARSAMBA', 'PERŞEMBE', 'PERSEMBE', 'CUMA', 'CUMARTESİ', 'CUMARTESI', 'PAZAR'].some(
+      keyword => upperContent.includes(keyword)
+    )
+
+    const newPlan: Record<string, DayPlan> = {
+      pazartesi: { ...EMPTY_DAY_PLAN },
+      sali: { ...EMPTY_DAY_PLAN },
+      carsamba: { ...EMPTY_DAY_PLAN },
+      persembe: { ...EMPTY_DAY_PLAN },
+      cuma: { ...EMPTY_DAY_PLAN },
+      cumartesi: { ...EMPTY_DAY_PLAN },
+      pazar: { ...EMPTY_DAY_PLAN },
+    }
+
+    if (!isWeekly) {
+      // Daily format - parse into pazartesi as generic day
+      const lines = content.split('\n')
+      let currentMeal: keyof DayPlan | null = null
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        const upper = trimmed.toUpperCase()
+        
+        if (upper.startsWith('KAHVALTI') || upper.startsWith('SABAH')) {
+          currentMeal = 'breakfast'
+          newPlan.pazartesi.breakfast = trimmed.replace(/^(KAHVALTI|SABAH):?\s*/i, '').trim()
+        } else if (upper.startsWith('ÖĞLE') || upper.startsWith('ÖĞLEN')) {
+          currentMeal = 'lunch'
+          newPlan.pazartesi.lunch = trimmed.replace(/^(ÖĞLE|ÖĞLEN):?\s*/i, '').trim()
+        } else if (upper.startsWith('ARA ÖĞÜN') || upper.startsWith('ARA ÖGÜN') || upper.startsWith('ATIŞTIRMALIK')) {
+          currentMeal = 'snack'
+          newPlan.pazartesi.snack = trimmed.replace(/^(ARA ÖĞÜN|ARA ÖGÜN|ATIŞTIRMALIK):?\s*/i, '').trim()
+        } else if (upper.startsWith('AKŞAM') || upper.startsWith('AKSAM')) {
+          currentMeal = 'dinner'
+          newPlan.pazartesi.dinner = trimmed.replace(/^(AKŞAM|AKSAM):?\s*/i, '').trim()
+        } else if (currentMeal) {
+          newPlan.pazartesi[currentMeal] += (newPlan.pazartesi[currentMeal] ? '\n' : '') + trimmed
+        }
+      }
+    } else {
+      // Weekly format
+      const lines = content.split('\n')
+      const dayMap: Record<string, string> = {
+        'PAZARTESİ': 'pazartesi',
+        'PAZARTESI': 'pazartesi',
+        'SALI': 'sali',
+        'ÇARŞAMBA': 'carsamba',
+        'CARSAMBA': 'carsamba',
+        'PERŞEMBE': 'persembe',
+        'PERSEMBE': 'persembe',
+        'CUMA': 'cuma',
+        'CUMARTESİ': 'cumartesi',
+        'CUMARTESI': 'cumartesi',
+        'PAZAR': 'pazar',
+      }
+
+      let currentDay: string | null = null
+      let currentMeal: keyof DayPlan | null = null
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed) continue
+        const upper = trimmed.toUpperCase()
+
+        // Check for day keyword
+        const dayMatch = Object.keys(dayMap).find(keyword => upper.startsWith(keyword))
+        if (dayMatch) {
+          currentDay = dayMap[dayMatch]
+          currentMeal = null
+          continue
+        }
+
+        // Check for meal keyword
+        if (upper.startsWith('KAHVALTI') || upper.startsWith('SABAH')) {
+          currentMeal = 'breakfast'
+          if (currentDay) {
+            newPlan[currentDay].breakfast = trimmed.replace(/^(KAHVALTI|SABAH):?\s*/i, '').trim()
+          }
+        } else if (upper.startsWith('ÖĞLE') || upper.startsWith('ÖĞLEN')) {
+          currentMeal = 'lunch'
+          if (currentDay) {
+            newPlan[currentDay].lunch = trimmed.replace(/^(ÖĞLE|ÖĞLEN):?\s*/i, '').trim()
+          }
+        } else if (upper.startsWith('ARA ÖĞÜN') || upper.startsWith('ARA ÖGÜN') || upper.startsWith('ATIŞTIRMALIK')) {
+          currentMeal = 'snack'
+          if (currentDay) {
+            newPlan[currentDay].snack = trimmed.replace(/^(ARA ÖĞÜN|ARA ÖGÜN|ATIŞTIRMALIK):?\s*/i, '').trim()
+          }
+        } else if (upper.startsWith('AKŞAM') || upper.startsWith('AKSAM')) {
+          currentMeal = 'dinner'
+          if (currentDay) {
+            newPlan[currentDay].dinner = trimmed.replace(/^(AKŞAM|AKSAM):?\s*/i, '').trim()
+          }
+        } else if (currentDay && currentMeal) {
+          newPlan[currentDay][currentMeal] += (newPlan[currentDay][currentMeal] ? '\n' : '') + trimmed
+        }
+      }
+    }
+
+    setDietPlan(newPlan)
+  }
+
+  // Compile structured state back to text format
+  const compileContent = (): string => {
+    let content = ''
+
+    if (templateCategory === 'weekly') {
+      // Weekly format
+      for (const day of DAYS) {
+        const dayPlan = dietPlan[day.key]
+        const hasContent = dayPlan.breakfast || dayPlan.lunch || dayPlan.snack || dayPlan.dinner
+
+        if (hasContent) {
+          content += `${day.label.toUpperCase()}\n`
+          if (dayPlan.breakfast) content += `KAHVALTI: ${dayPlan.breakfast}\n`
+          if (dayPlan.lunch) content += `ÖĞLE: ${dayPlan.lunch}\n`
+          if (dayPlan.snack) content += `ARA ÖĞÜN: ${dayPlan.snack}\n`
+          if (dayPlan.dinner) content += `AKŞAM: ${dayPlan.dinner}\n`
+          content += '\n'
+        }
+      }
+    } else {
+      // Daily format (use pazartesi as generic day)
+      const dayPlan = dietPlan.pazartesi
+      if (dayPlan.breakfast) content += `KAHVALTI: ${dayPlan.breakfast}\n`
+      if (dayPlan.lunch) content += `ÖĞLE: ${dayPlan.lunch}\n`
+      if (dayPlan.snack) content += `ARA ÖĞÜN: ${dayPlan.snack}\n`
+      if (dayPlan.dinner) content += `AKŞAM: ${dayPlan.dinner}\n`
+    }
+
+    return content.trim()
+  }
+
+  const handleNewTemplate = () => {
+    setSelectedTemplate(null)
+    setTemplateTitle('')
+    setTemplateCategory('daily')
+    setDietPlan({
+      pazartesi: { ...EMPTY_DAY_PLAN },
+      sali: { ...EMPTY_DAY_PLAN },
+      carsamba: { ...EMPTY_DAY_PLAN },
+      persembe: { ...EMPTY_DAY_PLAN },
+      cuma: { ...EMPTY_DAY_PLAN },
+      cumartesi: { ...EMPTY_DAY_PLAN },
+      pazar: { ...EMPTY_DAY_PLAN },
+    })
+    setActiveDay('pazartesi')
+  }
+
+  const handleSelectTemplate = (template: DietTemplate) => {
+    setSelectedTemplate(template)
+    setTemplateTitle(template.title)
+    setTemplateCategory(template.category)
+    parseContentToState(template.content, template.category)
+    setActiveDay('pazartesi')
+  }
+
+  const updateDayPlan = (day: string, meal: keyof DayPlan, value: string) => {
+    setDietPlan(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [meal]: value,
+      },
+    }))
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!templateTitle.trim()) {
+      toast.error('Lütfen şablon adı girin')
+      return
+    }
+
+    const compiledContent = compileContent()
+    if (!compiledContent.trim()) {
+      toast.error('Lütfen en az bir öğün için içerik girin')
+      return
+    }
+
+    try {
+      setSavingTemplate(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        toast.error('Kullanıcı bilgisi bulunamadı')
+        return
+      }
+
+      if (selectedTemplate) {
+        // Update existing template
+        const { error } = await supabase
+          .from('diet_templates')
+          .update({
+            title: templateTitle.trim(),
+            content: compiledContent,
+            category: templateCategory,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', selectedTemplate.id)
+          .eq('dietitian_id', user.id)
+
+        if (error) throw error
+        toast.success('Şablon güncellendi')
+      } else {
+        // Insert new template
+        const { data, error } = await supabase
+          .from('diet_templates')
+          .insert({
+            dietitian_id: user.id,
+            title: templateTitle.trim(),
+            content: compiledContent,
+            category: templateCategory,
+          })
+          .select()
+          .single()
+
+        if (error) throw error
+        toast.success('Şablon kaydedildi')
+        setSelectedTemplate(data)
+      }
+
+      await fetchTemplates()
+    } catch (error) {
+      console.error('Error saving template:', error)
+      toast.error('Şablon kaydedilirken hata oluştu')
+    } finally {
+      setSavingTemplate(false)
+    }
+  }
+
+  const handleDeleteTemplate = async () => {
+    if (!selectedTemplate) return
+
+    if (!confirm('Bu şablonu silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase
+        .from('diet_templates')
+        .delete()
+        .eq('id', selectedTemplate.id)
+        .eq('dietitian_id', user.id)
+
+      if (error) throw error
+      toast.success('Şablon silindi')
+      
+      setSelectedTemplate(null)
+      setTemplateTitle('')
+      setTemplateCategory('daily')
+      setDietPlan({
+        pazartesi: { ...EMPTY_DAY_PLAN },
+        sali: { ...EMPTY_DAY_PLAN },
+        carsamba: { ...EMPTY_DAY_PLAN },
+        persembe: { ...EMPTY_DAY_PLAN },
+        cuma: { ...EMPTY_DAY_PLAN },
+        cumartesi: { ...EMPTY_DAY_PLAN },
+        pazar: { ...EMPTY_DAY_PLAN },
+      })
+      setActiveDay('pazartesi')
+      await fetchTemplates()
+    } catch (error) {
+      console.error('Error deleting template:', error)
+      toast.error('Şablon silinirken hata oluştu')
+    }
   }
 
   if (loading) return <div className="p-8">Yükleniyor...</div>
@@ -337,6 +677,260 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* KART 3: DIYET ŞABLONLARIM */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Diyet Şablonlarım</CardTitle>
+          <CardDescription>Yeniden kullanılabilir diyet planı şablonları oluşturun ve yönetin.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Left Side: Template List */}
+            <div className="space-y-4">
+              <Button
+                type="button"
+                onClick={handleNewTemplate}
+                className="w-full"
+                variant="outline"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Yeni Şablon Ekle
+              </Button>
+              
+              {templatesLoading ? (
+                <div className="text-center py-8 text-gray-500">Yükleniyor...</div>
+              ) : templates.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  Henüz şablon eklenmemiş. Yeni şablon eklemek için yukarıdaki butona tıklayın.
+                </div>
+              ) : (
+                <div className="border rounded-lg max-h-[500px] overflow-y-auto">
+                  {templates.map((template) => (
+                    <div
+                      key={template.id}
+                      onClick={() => handleSelectTemplate(template)}
+                      className={`p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors ${
+                        selectedTemplate?.id === template.id ? 'bg-blue-50 border-blue-200' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-gray-900">{template.title}</h3>
+                        <span
+                          className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                            template.category === 'daily'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-purple-100 text-purple-700'
+                          }`}
+                        >
+                          {template.category === 'daily' ? 'Günlük' : 'Haftalık'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        {new Date(template.created_at).toLocaleDateString('tr-TR')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Right Side: Template Editor */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Şablon Adı</Label>
+                <Input
+                  value={templateTitle}
+                  onChange={(e) => setTemplateTitle(e.target.value)}
+                  placeholder="Örn: Kilo Verme Programı"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Kategori</Label>
+                <Select
+                  value={templateCategory}
+                  onValueChange={(value) => {
+                    setTemplateCategory(value as 'daily' | 'weekly')
+                    if (value === 'daily') {
+                      setActiveDay('pazartesi')
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Günlük Liste</SelectItem>
+                    <SelectItem value="weekly">Haftalık Program</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Structured Diet Builder */}
+              {templateCategory === 'weekly' ? (
+                <div className="space-y-4">
+                  <Label>Haftalık Program</Label>
+                  <Tabs value={activeDay} onValueChange={setActiveDay}>
+                    <TabsList className="w-full overflow-x-auto justify-start">
+                      {DAYS.map((day) => (
+                        <TabsTrigger key={day.key} value={day.key}>
+                          {day.label}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+
+                    {DAYS.map((day) => (
+                      <TabsContent key={day.key} value={day.key} className="mt-4">
+                        <div className="space-y-4">
+                          {/* Breakfast */}
+                          <div>
+                            <Label className="flex items-center gap-2 mb-2">
+                              <span className="text-xl">🍳</span>
+                              <span>Kahvaltı</span>
+                            </Label>
+                            <Textarea
+                              value={dietPlan[day.key].breakfast}
+                              onChange={(e) => updateDayPlan(day.key, 'breakfast', e.target.value)}
+                              placeholder="Kahvaltı menüsü..."
+                              className="min-h-[80px] bg-yellow-50/50 border-yellow-200"
+                            />
+                          </div>
+
+                          {/* Lunch */}
+                          <div>
+                            <Label className="flex items-center gap-2 mb-2">
+                              <span className="text-xl">🥗</span>
+                              <span>Öğle Yemeği</span>
+                            </Label>
+                            <Textarea
+                              value={dietPlan[day.key].lunch}
+                              onChange={(e) => updateDayPlan(day.key, 'lunch', e.target.value)}
+                              placeholder="Öğle yemeği menüsü..."
+                              className="min-h-[80px] bg-green-50/50 border-green-200"
+                            />
+                          </div>
+
+                          {/* Snack */}
+                          <div>
+                            <Label className="flex items-center gap-2 mb-2">
+                              <span className="text-xl">🍎</span>
+                              <span>Ara Öğünler</span>
+                            </Label>
+                            <Textarea
+                              value={dietPlan[day.key].snack}
+                              onChange={(e) => updateDayPlan(day.key, 'snack', e.target.value)}
+                              placeholder="Ara öğün seçenekleri..."
+                              className="min-h-[80px] bg-orange-50/50 border-orange-200"
+                            />
+                          </div>
+
+                          {/* Dinner */}
+                          <div>
+                            <Label className="flex items-center gap-2 mb-2">
+                              <span className="text-xl">🌙</span>
+                              <span>Akşam Yemeği</span>
+                            </Label>
+                            <Textarea
+                              value={dietPlan[day.key].dinner}
+                              onChange={(e) => updateDayPlan(day.key, 'dinner', e.target.value)}
+                              placeholder="Akşam yemeği menüsü..."
+                              className="min-h-[80px] bg-blue-50/50 border-blue-200"
+                            />
+                          </div>
+                        </div>
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                </div>
+              ) : (
+                // Daily format - single day
+                <div className="space-y-4">
+                  <Label>Genel / Günlük Liste</Label>
+                  <div className="space-y-4">
+                    {/* Breakfast */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🍳</span>
+                        <span>Kahvaltı</span>
+                      </Label>
+                      <Textarea
+                        value={dietPlan.pazartesi.breakfast}
+                        onChange={(e) => updateDayPlan('pazartesi', 'breakfast', e.target.value)}
+                        placeholder="Kahvaltı menüsü..."
+                        className="min-h-[80px] bg-yellow-50/50 border-yellow-200"
+                      />
+                    </div>
+
+                    {/* Lunch */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🥗</span>
+                        <span>Öğle Yemeği</span>
+                      </Label>
+                      <Textarea
+                        value={dietPlan.pazartesi.lunch}
+                        onChange={(e) => updateDayPlan('pazartesi', 'lunch', e.target.value)}
+                        placeholder="Öğle yemeği menüsü..."
+                        className="min-h-[80px] bg-green-50/50 border-green-200"
+                      />
+                    </div>
+
+                    {/* Snack */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🍎</span>
+                        <span>Ara Öğünler</span>
+                      </Label>
+                      <Textarea
+                        value={dietPlan.pazartesi.snack}
+                        onChange={(e) => updateDayPlan('pazartesi', 'snack', e.target.value)}
+                        placeholder="Ara öğün seçenekleri..."
+                        className="min-h-[80px] bg-orange-50/50 border-orange-200"
+                      />
+                    </div>
+
+                    {/* Dinner */}
+                    <div>
+                      <Label className="flex items-center gap-2 mb-2">
+                        <span className="text-xl">🌙</span>
+                        <span>Akşam Yemeği</span>
+                      </Label>
+                      <Textarea
+                        value={dietPlan.pazartesi.dinner}
+                        onChange={(e) => updateDayPlan('pazartesi', 'dinner', e.target.value)}
+                        placeholder="Akşam yemeği menüsü..."
+                        className="min-h-[80px] bg-blue-50/50 border-blue-200"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSaveTemplate}
+                  disabled={savingTemplate || !templateTitle.trim()}
+                  className="flex-1"
+                >
+                  {savingTemplate ? 'Kaydediliyor...' : 'Kaydet'}
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleDeleteTemplate}
+                  disabled={!selectedTemplate || savingTemplate}
+                  variant="destructive"
+                  className="flex-1"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Sil
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

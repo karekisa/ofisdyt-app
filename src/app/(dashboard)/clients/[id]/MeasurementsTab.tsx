@@ -13,6 +13,12 @@ type Measurement = {
   date: string
   weight: number | null
   body_fat_ratio: number | null
+  muscle_ratio: number | null
+  water_ratio: number | null
+  waist_circumference: number | null
+  hip_circumference: number | null
+  arm_circumference: number | null
+  leg_circumference: number | null
   created_at: string
 }
 
@@ -28,6 +34,12 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
     date: format(new Date(), 'yyyy-MM-dd'),
     weight: '',
     body_fat_ratio: '',
+    muscle_ratio: '',
+    water_ratio: '',
+    waist_circumference: '',
+    hip_circumference: '',
+    arm_circumference: '',
+    leg_circumference: '',
   })
 
   useEffect(() => {
@@ -60,6 +72,12 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
         date: formData.date,
         weight: formData.weight ? parseFloat(formData.weight) : null,
         body_fat_ratio: formData.body_fat_ratio ? parseFloat(formData.body_fat_ratio) : null,
+        muscle_ratio: formData.muscle_ratio ? parseFloat(formData.muscle_ratio) : null,
+        water_ratio: formData.water_ratio ? parseFloat(formData.water_ratio) : null,
+        waist_circumference: formData.waist_circumference ? parseFloat(formData.waist_circumference) : null,
+        hip_circumference: formData.hip_circumference ? parseFloat(formData.hip_circumference) : null,
+        arm_circumference: formData.arm_circumference ? parseFloat(formData.arm_circumference) : null,
+        leg_circumference: formData.leg_circumference ? parseFloat(formData.leg_circumference) : null,
       })
 
     if (error) {
@@ -71,6 +89,12 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
         date: format(new Date(), 'yyyy-MM-dd'),
         weight: '',
         body_fat_ratio: '',
+        muscle_ratio: '',
+        water_ratio: '',
+        waist_circumference: '',
+        hip_circumference: '',
+        arm_circumference: '',
+        leg_circumference: '',
       })
       loadMeasurements()
     }
@@ -145,7 +169,7 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
                       })}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {measurement.weight !== null && (
                       <div>
                         <p className="text-sm text-gray-500">Kilo</p>
@@ -156,9 +180,41 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
                     )}
                     {measurement.body_fat_ratio !== null && (
                       <div>
-                        <p className="text-sm text-gray-500">Vücut Yağ Oranı</p>
+                        <p className="text-sm text-gray-500">Yağ Oranı</p>
                         <p className="text-lg font-semibold text-gray-900">
                           %{measurement.body_fat_ratio}
+                        </p>
+                      </div>
+                    )}
+                    {measurement.muscle_ratio !== null && (
+                      <div>
+                        <p className="text-sm text-gray-500">Kas Kütlesi</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          %{measurement.muscle_ratio}
+                        </p>
+                      </div>
+                    )}
+                    {measurement.water_ratio !== null && (
+                      <div>
+                        <p className="text-sm text-gray-500">Su Oranı</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          %{measurement.water_ratio}
+                        </p>
+                      </div>
+                    )}
+                    {measurement.waist_circumference !== null && (
+                      <div>
+                        <p className="text-sm text-gray-500">Bel Çevresi</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {measurement.waist_circumference} cm
+                        </p>
+                      </div>
+                    )}
+                    {measurement.hip_circumference !== null && (
+                      <div>
+                        <p className="text-sm text-gray-500">Kalça Çevresi</p>
+                        <p className="text-lg font-semibold text-gray-900">
+                          {measurement.hip_circumference} cm
                         </p>
                       </div>
                     )}
@@ -179,12 +235,12 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
 
       {/* Add Measurement Dialog */}
       {isDialogOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full my-8">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">Yeni Ölçüm Ekle</h2>
             </div>
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Tarih <span className="text-red-500">*</span>
@@ -197,36 +253,137 @@ export default function MeasurementsTab({ clientId }: MeasurementsTabProps) {
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kilo (kg)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  value={formData.weight}
-                  onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                  placeholder="Örn: 75.5"
-                />
+
+              {/* Body Composition Section */}
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Vücut Kompozisyonu</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kilo (kg)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.weight}
+                      onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 75.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Yağ Oranı (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.body_fat_ratio}
+                      onChange={(e) => setFormData({ ...formData, body_fat_ratio: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 25.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kas Kütlesi (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.muscle_ratio}
+                      onChange={(e) => setFormData({ ...formData, muscle_ratio: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 40.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Vücut Su Oranı (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      value={formData.water_ratio}
+                      onChange={(e) => setFormData({ ...formData, water_ratio: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 55.0"
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vücut Yağ Oranı (%)
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  min="0"
-                  max="100"
-                  value={formData.body_fat_ratio}
-                  onChange={(e) => setFormData({ ...formData, body_fat_ratio: e.target.value })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
-                  placeholder="Örn: 25.5"
-                />
+
+              {/* Circumference Measurements Section */}
+              <div className="border-t border-gray-200 pt-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Çevre Ölçümleri (cm)</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bel Çevresi (cm)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.waist_circumference}
+                      onChange={(e) => setFormData({ ...formData, waist_circumference: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 85.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kalça Çevresi (cm)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.hip_circumference}
+                      onChange={(e) => setFormData({ ...formData, hip_circumference: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 95.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Kol Çevresi (cm)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.arm_circumference}
+                      onChange={(e) => setFormData({ ...formData, arm_circumference: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 30.0"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Bacak Çevresi (cm)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={formData.leg_circumference}
+                      onChange={(e) => setFormData({ ...formData, leg_circumference: e.target.value })}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="Örn: 55.0"
+                    />
+                  </div>
+                </div>
               </div>
-              <div className="flex space-x-4 pt-4">
+
+              <div className="flex space-x-4 pt-4 border-t border-gray-200">
                 <button
                   type="button"
                   onClick={() => setIsDialogOpen(false)}

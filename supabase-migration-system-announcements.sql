@@ -63,3 +63,4 @@ CREATE POLICY "Admins can delete announcements"
     )
   );
 
+

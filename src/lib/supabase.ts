@@ -22,5 +22,6 @@ export type {
   PaymentMethod,
   Profession,
   SubscriptionStatus,
+  DietTemplate,
 } from './types'
 

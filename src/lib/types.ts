@@ -116,3 +116,13 @@ export interface SystemAnnouncement {
   created_at: string;
   created_by: string | null;
 }
+
+export interface DietTemplate {
+  id: string;
+  dietitian_id: string;
+  title: string;
+  content: string;
+  category: 'daily' | 'weekly';
+  created_at: string;
+  updated_at: string;
+}
