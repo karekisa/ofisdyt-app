@@ -11,12 +11,24 @@ export default function LandingPage() {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     "name": "Diyetlik",
-    "applicationCategory": "HealthApplication",
-    "operatingSystem": "Web",
-    "url": "https://diyetlik.com.tr",
-    "logo": "https://diyetlik.com.tr/logo.png",
-    "description": "Diyetisyenlerin işini %80 hızlandıran yerli sistem. Tek tıkla WhatsApp diyet gönderimi, otomatik randevu takibi ve finansal yönetim. Ücretsiz 15 gün deneyin.",
+    "description": "Diyetisyenler için randevu ve klinik yönetim yazılımı.",
+    "applicationCategory": "MedicalApplication",
+    "operatingSystem": "Web platform",
+    "url": "https://www.diyetlik.com.tr",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.diyetlik.com.tr/logo.png"
+    },
     "offers": [
+      {
+        "@type": "Offer",
+        "name": "Ücretsiz Deneme",
+        "price": "0",
+        "priceCurrency": "TRY",
+        "availability": "https://schema.org/InStock",
+        "priceValidUntil": "2025-12-31",
+        "description": "15 gün ücretsiz deneme"
+      },
       {
         "@type": "Offer",
         "name": "Aylık Paket",
@@ -25,7 +37,7 @@ export default function LandingPage() {
         "priceValidUntil": "2025-12-31",
         "availability": "https://schema.org/InStock",
         "billingIncrement": "P1M",
-        "category": "subscription"
+        "description": "Aylık abonelik paketi"
       },
       {
         "@type": "Offer",
@@ -35,7 +47,7 @@ export default function LandingPage() {
         "priceValidUntil": "2025-12-31",
         "availability": "https://schema.org/InStock",
         "billingIncrement": "P1Y",
-        "category": "subscription"
+        "description": "Yıllık abonelik paketi (%17 tasarruf)"
       }
     ],
     "aggregateRating": {
@@ -55,18 +67,29 @@ export default function LandingPage() {
       "Otomatik Hatırlatmalar",
       "Raporlama ve Analiz"
     ],
-    "screenshot": "https://diyetlik.com.tr/logo.png",
+    "screenshot": "https://www.diyetlik.com.tr/logo.png",
     "softwareVersion": "1.0",
-    "releaseNotes": "Diyetisyenler için kapsamlı klinik yönetim yazılımı"
+    "publisher": {
+      "@type": "Organization",
+      "name": "Diyetlik (Karekisa Yazılım)",
+      "url": "https://www.diyetlik.com.tr",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.diyetlik.com.tr/logo.png"
+      }
+    }
   }
 
   // Organization Schema
   const organizationSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    "name": "Diyetlik",
-    "url": "https://diyetlik.com.tr",
-    "logo": "https://diyetlik.com.tr/logo.png",
+    "name": "Diyetlik (Karekisa Yazılım)",
+    "url": "https://www.diyetlik.com.tr",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.diyetlik.com.tr/logo.png"
+    },
     "description": "Diyetisyenler için online randevu ve klinik yönetim yazılımı. Diyetisyenlerin işini %80 hızlandıran yerli sistem.",
     "sameAs": [
       // Add social media links when available
