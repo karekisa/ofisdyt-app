@@ -14,3 +14,4 @@ WHERE category IS NULL;
 ALTER TABLE diet_templates
 ALTER COLUMN category SET NOT NULL;
 
+

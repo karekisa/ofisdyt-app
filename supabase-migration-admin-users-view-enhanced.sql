@@ -37,3 +37,4 @@ GRANT SELECT ON admin_users_view TO authenticated;
 COMMENT ON VIEW admin_users_view IS 'Enhanced admin view with user activity and statistics';
 
 
+

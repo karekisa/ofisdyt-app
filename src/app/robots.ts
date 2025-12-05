@@ -5,8 +5,9 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: '*',
       allow: '/',
+      disallow: ['/admin/', '/dashboard/'], // Keep admin private
     },
-    sitemap: 'https://diyetlik.com.tr/sitemap.xml',
+    sitemap: 'https://www.diyetlik.com.tr/sitemap.xml',
   }
 }
 
