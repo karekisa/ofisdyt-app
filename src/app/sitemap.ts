@@ -2,24 +2,34 @@ import { MetadataRoute } from 'next'
 import { supabase } from '@/lib/supabase'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Ensure base URL uses HTTPS and www to match GSC verified domain
   const baseUrl = 'https://www.diyetlik.com.tr'
 
-  // Static routes
+  // Helper function to ensure valid URL format
+  const ensureValidUrl = (path: string): string => {
+    // Remove any leading/trailing slashes and ensure proper format
+    const cleanPath = path.replace(/^\/+|\/+$/g, '')
+    // Ensure base URL doesn't have trailing slash
+    const cleanBase = baseUrl.replace(/\/+$/, '')
+    return cleanPath ? `${cleanBase}/${cleanPath}` : cleanBase
+  }
+
+  // Static routes - ensure URLs are properly formatted
   const staticRoutes: MetadataRoute.Sitemap = [
     {
-      url: baseUrl,
+      url: ensureValidUrl(''),
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,
     },
     {
-      url: `${baseUrl}/login`,
+      url: ensureValidUrl('login'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/subscription`,
+      url: ensureValidUrl('subscription'),
       lastModified: new Date(),
       changeFrequency: 'monthly',
       priority: 0.7,
@@ -37,20 +47,45 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (error) {
       console.error('Error fetching profiles for sitemap:', error)
+      // Return static routes even if dynamic fetch fails - prevents sitemap from being empty
       return staticRoutes
     }
 
     // Generate dynamic routes for dietitian booking pages
-    const dynamicRoutes: MetadataRoute.Sitemap = (profiles || []).map((profile) => ({
-      url: `${baseUrl}/randevu/${profile.public_slug}`,
-      lastModified: profile.created_at ? new Date(profile.created_at) : new Date(),
-      changeFrequency: 'weekly' as const,
-      priority: 0.6,
-    }))
+    // Filter out any invalid slugs and ensure URL safety
+    const dynamicRoutes: MetadataRoute.Sitemap = (profiles || [])
+      .filter((profile) => {
+        // Validate public_slug exists and is a valid string
+        return (
+          profile.public_slug &&
+          typeof profile.public_slug === 'string' &&
+          profile.public_slug.trim().length > 0 &&
+          // Basic URL safety: no special characters that could break URLs
+          /^[a-z0-9-]+$/.test(profile.public_slug.toLowerCase())
+        )
+      })
+      .map((profile) => {
+        const slug = profile.public_slug!.toLowerCase().trim()
+        return {
+          url: ensureValidUrl(`randevu/${slug}`),
+          lastModified: profile.created_at ? new Date(profile.created_at) : new Date(),
+          changeFrequency: 'weekly' as const,
+          priority: 0.6,
+        }
+      })
 
-    return [...staticRoutes, ...dynamicRoutes]
+    const allRoutes = [...staticRoutes, ...dynamicRoutes]
+
+    // Log success for debugging (only in development)
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[sitemap] Generated sitemap with ${allRoutes.length} URLs (${staticRoutes.length} static, ${dynamicRoutes.length} dynamic)`)
+    }
+
+    return allRoutes
   } catch (error) {
+    // Critical error handling - ensure we always return at least static routes
     console.error('Exception fetching profiles for sitemap:', error)
+    // Return static routes to prevent empty sitemap
     return staticRoutes
   }
 }
