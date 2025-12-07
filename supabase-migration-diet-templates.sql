@@ -35,3 +35,4 @@ CREATE POLICY "Dietitians can delete their own diet templates"
   USING (auth.uid() = dietitian_id);
 
 
+

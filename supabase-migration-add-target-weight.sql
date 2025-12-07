@@ -6,3 +6,4 @@ ADD COLUMN IF NOT EXISTS target_weight DECIMAL(5,2);
 COMMENT ON COLUMN clients.target_weight IS 'Hedef kilo (kg) - Danışanın hedeflediği kilo hedefi';
 
 
+
