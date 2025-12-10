@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react'
 import Link from 'next/link'
-import { Clock, Star, AlertTriangle, Sparkles } from 'lucide-react'
+import { Clock, Star, AlertTriangle, Sparkles, Crown } from 'lucide-react'
 import { differenceInCalendarDays, format } from 'date-fns'
 import { tr } from 'date-fns/locale'
 
@@ -10,14 +10,29 @@ type SubscriptionStatusWidgetProps = {
   subscription_status: string | null
   subscription_ends_at: string | null
   trial_ends_at: string | null
+  is_founding_member?: boolean | null
 }
 
 export default function SubscriptionStatusWidget({
   subscription_status,
   subscription_ends_at,
   trial_ends_at,
+  is_founding_member = false,
 }: SubscriptionStatusWidgetProps) {
   const statusInfo = useMemo(() => {
+    // Founding members have lifetime access
+    if (is_founding_member) {
+      return {
+        type: 'founding' as const,
+        icon: Crown,
+        iconColor: 'text-yellow-500',
+        title: 'Kurucu Üye',
+        text: 'Ömür boyu ücretsiz',
+        subtext: null,
+        button: null,
+      }
+    }
+
     const isActive = subscription_status === 'active'
     const trialEnd = trial_ends_at ? new Date(trial_ends_at) : null
     const subscriptionEnd = subscription_ends_at ? new Date(subscription_ends_at) : null
@@ -71,7 +86,7 @@ export default function SubscriptionStatusWidget({
         className: 'w-full bg-red-600 text-white text-xs py-2 rounded mt-2 hover:bg-red-700 transition-colors',
       },
     }
-  }, [subscription_status, subscription_ends_at, trial_ends_at])
+  }, [subscription_status, subscription_ends_at, trial_ends_at, is_founding_member])
 
   const Icon = statusInfo.icon
 

@@ -13,6 +13,7 @@ export default function SubscriptionPage() {
     subscription_status: string | null
     subscription_ends_at: string | null
     trial_ends_at: string | null
+    is_founding_member: boolean | null
   } | null>(null)
   const [userEmail, setUserEmail] = useState<string>('')
 
@@ -32,7 +33,7 @@ export default function SubscriptionPage() {
 
     const { data } = await supabase
       .from('profiles')
-      .select('subscription_status, subscription_ends_at, trial_ends_at')
+      .select('subscription_status, subscription_ends_at, trial_ends_at, is_founding_member')
       .eq('id', user.id)
       .single()
 
@@ -66,7 +67,8 @@ export default function SubscriptionPage() {
     )
   }
 
-  const isActive = profile?.subscription_status === 'active'
+  const isFoundingMember = profile?.is_founding_member
+  const isActive = profile?.subscription_status === 'active' || isFoundingMember
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
@@ -84,7 +86,9 @@ export default function SubscriptionPage() {
             Abonelik Durumu
           </h1>
           <p className="text-gray-600">
-            İhtiyacınıza uygun paketi seçin ve WhatsApp üzerinden iletişime geçin
+            {isFoundingMember 
+              ? 'Kurucu Üye statüsü ile ömür boyu ücretsiz erişime sahipsiniz'
+              : 'İhtiyacınıza uygun paketi seçin ve WhatsApp üzerinden iletişime geçin'}
           </p>
         </div>
 
@@ -95,19 +99,38 @@ export default function SubscriptionPage() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-600">Durum:</span>
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                profile?.subscription_status === 'active'
-                  ? 'bg-green-100 text-green-800'
-                  : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
-                    ? 'bg-blue-100 text-blue-800'
-                    : 'bg-gray-100 text-gray-800'
+                isFoundingMember
+                  ? 'bg-yellow-100 text-yellow-800'
+                  : profile?.subscription_status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
               }`}>
-                {profile?.subscription_status === 'active'
-                  ? 'Aktif'
-                  : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
-                    ? 'Deneme'
-                    : 'Süresi Dolmuş'}
+                {isFoundingMember
+                  ? '👑 Kurucu Üye'
+                  : profile?.subscription_status === 'active'
+                    ? 'Aktif'
+                    : profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date()
+                      ? 'Deneme'
+                      : 'Süresi Dolmuş'}
               </span>
             </div>
+            {isFoundingMember && (
+              <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-lg border-2 border-yellow-300">
+                <div className="flex items-start space-x-3">
+                  <span className="text-2xl">👑</span>
+                  <div>
+                    <div className="text-sm font-semibold text-yellow-900 mb-1">
+                      Kurucu Üye Statüsü
+                    </div>
+                    <div className="text-xs text-yellow-700">
+                      Ömür boyu ücretsiz erişime sahipsiniz. Abonelik gerektirmez.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
             {profile?.subscription_ends_at && (
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Bitiş Tarihi:</span>
@@ -135,8 +158,9 @@ export default function SubscriptionPage() {
           </div>
         </div>
 
-        {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Pricing Cards - Hide for founding members */}
+        {!isFoundingMember && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           {/* Monthly Plan */}
           <div className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-8 hover:border-green-500 transition-all">
             <div className="text-center mb-6">
@@ -262,6 +286,7 @@ export default function SubscriptionPage() {
             </a>
           </div>
         </div>
+        )}
 
         {/* Additional Info */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

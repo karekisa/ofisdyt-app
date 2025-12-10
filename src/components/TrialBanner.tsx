@@ -7,13 +7,20 @@ import { differenceInCalendarDays } from 'date-fns'
 type TrialBannerProps = {
   trial_ends_at: string | null
   subscription_status: string | null
+  is_founding_member?: boolean | null
 }
 
 export default function TrialBanner({
   trial_ends_at,
   subscription_status,
+  is_founding_member = false,
 }: TrialBannerProps) {
   const daysLeft = useMemo(() => {
+    // Don't show banner for founding members
+    if (is_founding_member) {
+      return null
+    }
+
     // If subscription is active, don't show banner
     if (subscription_status === 'active') {
       return null
@@ -34,7 +41,7 @@ export default function TrialBanner({
     }
 
     return days
-  }, [trial_ends_at, subscription_status])
+  }, [trial_ends_at, subscription_status, is_founding_member])
 
   // Don't render if no days left or subscription is active
   if (daysLeft === null) {

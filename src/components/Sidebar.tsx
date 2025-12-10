@@ -12,6 +12,7 @@ import {
   LogOut,
   X,
   HelpCircle,
+  Crown,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import SubscriptionStatusWidget from './SubscriptionStatusWidget'
@@ -23,6 +24,8 @@ type SidebarProps = {
     subscription_status: string | null
     subscription_ends_at: string | null
     trial_ends_at: string | null
+    is_founding_member: boolean | null
+    full_name: string | null
   } | null
 }
 
@@ -142,12 +145,30 @@ export default function Sidebar({
 
           {/* Bottom Section */}
           <div className="border-t border-gray-200 p-4 space-y-4">
-            {/* Subscription Status */}
+            {/* Founding Member Badge */}
+            {profile?.is_founding_member && (
+              <div className="p-3 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border-2 border-yellow-300">
+                <div className="flex items-center space-x-2">
+                  <Crown className="w-5 h-5 text-yellow-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-semibold text-yellow-900">
+                      👑 Kurucu Üye
+                    </div>
+                    <div className="text-xs text-yellow-700 mt-0.5">
+                      Ömür boyu ücretsiz erişim
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Subscription Status - Show for all, but widget handles founding members */}
             {profile && (
               <SubscriptionStatusWidget
                 subscription_status={profile.subscription_status}
                 subscription_ends_at={profile.subscription_ends_at}
                 trial_ends_at={profile.trial_ends_at}
+                is_founding_member={profile.is_founding_member}
               />
             )}
 

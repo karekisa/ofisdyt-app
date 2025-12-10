@@ -24,6 +24,8 @@ export default function DashboardLayout({
     subscription_status: string | null
     subscription_ends_at: string | null
     trial_ends_at: string | null
+    is_founding_member: boolean | null
+    full_name: string | null
   } | null>(null)
 
   useEffect(() => {
@@ -40,10 +42,10 @@ export default function DashboardLayout({
       return
     }
 
-    // Load profile for subscription status
+    // Load profile for subscription status and founding member status
     const { data } = await supabase
       .from('profiles')
-      .select('subscription_status, subscription_ends_at, trial_ends_at')
+      .select('subscription_status, subscription_ends_at, trial_ends_at, is_founding_member, full_name')
       .eq('id', user.id)
       .single()
 
@@ -112,11 +114,12 @@ export default function DashboardLayout({
         {/* Global Announcement Banner */}
         <AnnouncementBanner />
 
-        {/* Trial Banner */}
-        {profile && (
+        {/* Trial Banner - Hide for founding members */}
+        {profile && !profile.is_founding_member && (
           <TrialBanner
             trial_ends_at={profile.trial_ends_at}
             subscription_status={profile.subscription_status}
+            is_founding_member={profile.is_founding_member}
           />
         )}
 

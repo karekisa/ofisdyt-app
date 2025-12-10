@@ -133,6 +133,50 @@ export function formatPhoneForWhatsapp(phone: string | null | undefined): string
 }
 
 /**
+ * Check if a user has active subscription access
+ * Founding members have lifetime free access regardless of subscription status
+ * 
+ * @param subscription_status - User's subscription status ('active', 'expired', 'suspended', or null)
+ * @param subscription_ends_at - Subscription end date (ISO string or null)
+ * @param trial_ends_at - Trial end date (ISO string or null)
+ * @param is_founding_member - Whether user is a founding member (boolean or null)
+ * @returns boolean - true if user has access, false otherwise
+ */
+export function hasSubscriptionAccess(
+  subscription_status: string | null,
+  subscription_ends_at: string | null,
+  trial_ends_at: string | null,
+  is_founding_member: boolean | null
+): boolean {
+  // Founding members have lifetime free access
+  if (is_founding_member === true) {
+    return true
+  }
+
+  // Check if subscription is active
+  if (subscription_status === 'active') {
+    // If there's an end date, check if it's in the future
+    if (subscription_ends_at) {
+      const endDate = new Date(subscription_ends_at)
+      const now = new Date()
+      return endDate > now
+    }
+    // If no end date but status is active, grant access
+    return true
+  }
+
+  // Check if trial is still valid
+  if (trial_ends_at) {
+    const trialEnd = new Date(trial_ends_at)
+    const now = new Date()
+    return trialEnd > now
+  }
+
+  // No active subscription or valid trial
+  return false
+}
+
+/**
  * Check if an appointment slot is already booked (server-side conflict detection)
  * 
  * This function performs a database query to check if an appointment already exists
