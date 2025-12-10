@@ -7,3 +7,4 @@ COMMENT ON COLUMN clients.target_weight IS 'Hedef kilo (kg) - Danışanın hedef
 
 
 
+

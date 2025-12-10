@@ -1,10 +1,13 @@
--- Enhanced admin_users_view with activity tracking and counts
--- This view includes last_sign_in_at, client_count, and appointment_count
+-- Migration: Add is_founding_member column to profiles table
+-- This allows admins to mark specific users as "Founding Members" (Kurucu Üye)
 
--- Drop existing view if it exists
+-- Add is_founding_member column to profiles table
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS is_founding_member BOOLEAN DEFAULT FALSE NOT NULL;
+
+-- Update admin_users_view to include is_founding_member
 DROP VIEW IF EXISTS admin_users_view;
 
--- Create enhanced view with activity data
 CREATE VIEW admin_users_view AS
 SELECT 
   p.id,
@@ -13,6 +16,7 @@ SELECT
   p.phone,
   p.public_slug,
   p.is_admin,
+  p.is_founding_member,
   p.subscription_status,
   p.subscription_ends_at,
   p.trial_ends_at,
@@ -34,9 +38,8 @@ LEFT JOIN auth.users u ON u.id = p.id;
 GRANT SELECT ON admin_users_view TO authenticated;
 
 -- Add comment
-COMMENT ON VIEW admin_users_view IS 'Enhanced admin view with user activity and statistics';
+COMMENT ON VIEW admin_users_view IS 'Enhanced admin view with user activity, statistics, and founding member status';
 
-
-
-
+-- Add comment to column
+COMMENT ON COLUMN public.profiles.is_founding_member IS 'Indicates if the user is a founding member (Kurucu Üye)';
 

@@ -10,3 +10,4 @@ CREATE INDEX IF NOT EXISTS idx_profiles_profession ON profiles(profession);
 
 
 
+

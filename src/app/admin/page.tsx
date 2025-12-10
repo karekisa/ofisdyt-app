@@ -21,6 +21,8 @@ import {
   Edit,
   MessageSquare,
   MessageCircle,
+  Crown,
+  Star,
 } from 'lucide-react'
 import UserInspectorModal from './UserInspectorModal'
 import AnnouncementManager from './AnnouncementManager'
@@ -36,6 +38,7 @@ type UserWithEmail = {
   phone: string | null
   public_slug: string | null
   is_admin: boolean | null
+  is_founding_member: boolean | null
   subscription_status: 'active' | 'expired' | 'suspended' | null
   subscription_ends_at: string | null
   trial_ends_at: string | null
@@ -142,7 +145,7 @@ export default function AdminPage() {
     // Load from admin_users_view (includes email)
     const { data: profiles, error } = await supabase
       .from('admin_users_view')
-      .select('id, full_name, email, clinic_name, phone, public_slug, is_admin, subscription_status, subscription_ends_at, trial_ends_at, last_sign_in_at, client_count, appointment_count, created_at')
+      .select('id, full_name, email, clinic_name, phone, public_slug, is_admin, is_founding_member, subscription_status, subscription_ends_at, trial_ends_at, last_sign_in_at, client_count, appointment_count, created_at')
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -160,6 +163,7 @@ export default function AdminPage() {
           last_sign_in_at: null,
           client_count: 0,
           appointment_count: 0,
+          is_founding_member: p.is_founding_member || false,
         })) as UserWithEmail[])
       }
     } else if (profiles) {
@@ -293,6 +297,28 @@ export default function AdminPage() {
       router.refresh()
     } else {
       alert('Hata: ' + error.message)
+    }
+  }
+
+  const toggleFoundingMember = async (userId: string, currentValue: boolean) => {
+    const action = currentValue ? 'Kurucu Üye statüsünü kaldırmak' : 'Kurucu Üye statüsü vermek'
+    if (!window.confirm(`Bu kullanıcıya ${action} istediğinize emin misiniz?`)) {
+      return
+    }
+
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_founding_member: !currentValue,
+      })
+      .eq('id', userId)
+
+    if (!error) {
+      toast.success(currentValue ? 'Kurucu Üye statüsü kaldırıldı' : 'Kurucu Üye statüsü verildi')
+      loadData()
+      router.refresh()
+    } else {
+      toast.error('Hata: ' + error.message)
     }
   }
 
@@ -533,6 +559,9 @@ export default function AdminPage() {
                     Aktivite
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Kurucu Üye
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     İletişim
                   </th>
                 </tr>
@@ -540,7 +569,7 @@ export default function AdminPage() {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredUsers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                       {searchTerm ? 'Arama sonucu bulunamadı' : 'Kullanıcı bulunamadı'}
                     </td>
                   </tr>
@@ -562,8 +591,16 @@ export default function AdminPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
-                                {user.full_name || 'İsimsiz'}
+                              <div className="flex items-center gap-2">
+                                <div className="text-sm font-medium text-gray-900">
+                                  {user.full_name || 'İsimsiz'}
+                                </div>
+                                {user.is_founding_member && (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <Crown className="w-3 h-3 mr-1" />
+                                    👑 Kurucu Üye
+                                  </span>
+                                )}
                               </div>
                               <div className="text-xs text-gray-500 mt-0.5">
                                 {user.clinic_name || '-'}
@@ -608,6 +645,27 @@ export default function AdminPage() {
                               <span>📅 {user.appointment_count || 0}</span>
                             </div>
                           </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          {user.is_founding_member ? (
+                            <button
+                              onClick={() => toggleFoundingMember(user.id, true)}
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors bg-yellow-500 text-white hover:bg-yellow-600"
+                              title="Kurucu Üye Statüsünü Kaldır"
+                            >
+                              <Crown className="w-3 h-3 mr-1" />
+                              Kurucu Üye
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => toggleFoundingMember(user.id, false)}
+                              className="inline-flex items-center px-3 py-1.5 text-xs font-medium rounded transition-colors bg-gray-200 text-gray-700 hover:bg-gray-300 border border-gray-300"
+                              title="Kurucu Üye Yap"
+                            >
+                              <Star className="w-3 h-3 mr-1" />
+                              Yap
+                            </button>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
